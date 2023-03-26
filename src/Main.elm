@@ -153,7 +153,7 @@ type alias Model =
 
 type EditType
     = NewBookmark
-    | KnownBookmark Int
+    | KnownBookmark Int Bookmark
 
 
 type ViewMode
@@ -194,6 +194,9 @@ update msg model =
         ( OpenEdit NewBookmark, DisplayBookmarks ) ->
             ( { model | viewMode = EditBookmark newBookmark NewBookmark }, Cmd.none )
 
+        ( OpenEdit (KnownBookmark i bookmark ), DisplayBookmarks ) ->
+            ( { model | viewMode = EditBookmark bookmark (KnownBookmark i bookmark) }, Cmd.none )
+
         ( Edit editMsg, EditBookmark bookmark editType ) ->
             let
                 newViewMode =
@@ -212,6 +215,18 @@ update msg model =
               }
             , updateBookmarks (encodeBookmarks updatedBookmarks)
             )
+
+        ( Save, EditBookmark bookmark (KnownBookmark index _)) ->
+            let
+              updatedBookmarks =
+                List.take index model.bookmarks ++ (bookmark :: List.drop (index + 1) model.bookmarks)
+            in
+              ( { model
+                | viewMode = DisplayBookmarks
+                , bookmarks = updatedBookmarks
+                }
+              , updateBookmarks  (encodeBookmarks updatedBookmarks)
+              )
 
         ( Remove index, _ ) ->
             let
@@ -261,8 +276,9 @@ view model =
                 [ bookmarkEditorView bookmark
                 ]
 
-            _ ->
-                []
+            EditBookmark bookmark (KnownBookmark _ _) ->
+                [ bookmarkEditorView bookmark
+                ]
         )
 
 
@@ -341,6 +357,9 @@ bookmarkView i bookmark =
             [ img [ defaultSizedFaviconUrl bookmark |> src ] []
             , text bookmark.title
             ]
+        , button
+            [ onClick (OpenEdit (KnownBookmark i bookmark)) ]
+            [ text "*" ]
         , button
             [ onClick (Remove i) ]
             [ text "-" ]
