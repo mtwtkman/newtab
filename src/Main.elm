@@ -1,10 +1,12 @@
 port module Main exposing (main)
 
 import Browser exposing (element)
+import Dict exposing (Dict)
 import Html exposing (Html, a, button, div, img, input, text)
 import Html.Attributes exposing (class, href, src, value)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as D
+import Json.Encode as E
 import Url.Builder as UB exposing (crossOrigin)
 
 
@@ -26,7 +28,7 @@ main =
 -- PORTS
 
 
-port addBookmark : ( Url, Title ) -> Cmd msg
+port updateBookmarks : E.Value -> Cmd msg
 
 
 port messageReceiver : (Flags -> msg) -> Sub msg
@@ -40,18 +42,27 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         bookmarks =
-            case D.decodeValue bookmarksDecoder flags of
-                Err _ ->
-                    []
-
-                Ok x ->
-                    x
+            decodeBookmarks flags
     in
-    ( { bookmarks = bookmarks, viewMode = DisplayBookmarks }, Cmd.none )
+    ( { bookmarks = bookmarks
+      , viewMode = DisplayBookmarks
+      }
+    , Cmd.none
+    )
 
 
 
 -- DECODER
+
+
+decodeBookmarks : Flags -> List Bookmark
+decodeBookmarks flags =
+    case D.decodeValue bookmarksDecoder flags of
+        Err _ ->
+            []
+
+        Ok x ->
+            x
 
 
 bookmarkDecoder : D.Decoder Bookmark
@@ -65,6 +76,23 @@ bookmarkDecoder =
 bookmarksDecoder : D.Decoder (List Bookmark)
 bookmarksDecoder =
     D.list bookmarkDecoder
+
+
+
+-- ENCODER
+
+
+encodeBookmark : Bookmark -> E.Value
+encodeBookmark bookmark =
+    E.object
+        [ ( "url", E.string bookmark.url )
+        , ( "title", E.string bookmark.title )
+        ]
+
+
+encodeBookmarks : List Bookmark -> E.Value
+encodeBookmarks bookmarks =
+  E.list encodeBookmark bookmarks
 
 
 
@@ -161,6 +189,9 @@ type EditMsg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.viewMode ) of
+        ( ReceiveLatestBookmarks flags, _ ) ->
+            ( { model | bookmarks = decodeBookmarks flags }, Cmd.none )
+
         ( OpenEdit NewBookmark, DisplayBookmarks ) ->
             ( { model | viewMode = EditBookmark newBookmark NewBookmark }, Cmd.none )
 
@@ -172,12 +203,17 @@ update msg model =
             ( { model | viewMode = newViewMode }, Cmd.none )
 
         ( Save, EditBookmark bookmark NewBookmark ) ->
+            let
+                updatedBookmarks = model.bookmarks ++ [bookmark]
+            in
+
             ( { model
                 | viewMode = DisplayBookmarks
-                , bookmarks = model.bookmarks ++ [ bookmark ]
+                , bookmarks = updatedBookmarks
               }
-            , addBookmark ( bookmark.url, bookmark.title )
+            , updateBookmarks (encodeBookmarks updatedBookmarks)
             )
+
         _ ->
             ( model, Cmd.none )
 

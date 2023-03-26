@@ -10582,16 +10582,17 @@ var $author$project$Main$bookmarkDecoder = A3(
 	A2($elm$json$Json$Decode$field, 'url', $elm$json$Json$Decode$string),
 	A2($elm$json$Json$Decode$field, 'title', $elm$json$Json$Decode$string));
 var $author$project$Main$bookmarksDecoder = $elm$json$Json$Decode$list($author$project$Main$bookmarkDecoder);
+var $author$project$Main$decodeBookmarks = function (flags) {
+	var _v0 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$bookmarksDecoder, flags);
+	if (_v0.$ === 'Err') {
+		return _List_Nil;
+	} else {
+		var x = _v0.a;
+		return x;
+	}
+};
 var $author$project$Main$init = function (flags) {
-	var bookmarks = function () {
-		var _v0 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$bookmarksDecoder, flags);
-		if (_v0.$ === 'Err') {
-			return _List_Nil;
-		} else {
-			var x = _v0.a;
-			return x;
-		}
-	}();
+	var bookmarks = $author$project$Main$decodeBookmarks(flags);
 	return _Utils_Tuple2(
 		{bookmarks: bookmarks, viewMode: $author$project$Main$DisplayBookmarks},
 		$elm$core$Platform$Cmd$none);
@@ -10608,21 +10609,23 @@ var $author$project$Main$EditBookmark = F2(
 		return {$: 'EditBookmark', a: a, b: b};
 	});
 var $author$project$Main$NewBookmark = {$: 'NewBookmark'};
-var $author$project$Main$addBookmark = _Platform_outgoingPort(
-	'addBookmark',
-	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
-			_List_fromArray(
-				[
-					$elm$json$Json$Encode$string(a),
-					$elm$json$Json$Encode$string(b)
-				]));
-	});
+var $author$project$Main$encodeBookmark = function (bookmark) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'url',
+				$elm$json$Json$Encode$string(bookmark.url)),
+				_Utils_Tuple2(
+				'title',
+				$elm$json$Json$Encode$string(bookmark.title))
+			]));
+};
+var $author$project$Main$encodeBookmarks = function (bookmarks) {
+	return A2($elm$json$Json$Encode$list, $author$project$Main$encodeBookmark, bookmarks);
+};
 var $author$project$Main$newBookmark = {title: '', url: ''};
+var $author$project$Main$updateBookmarks = _Platform_outgoingPort('updateBookmarks', $elm$core$Basics$identity);
 var $author$project$Main$updateEditingBookmark = F2(
 	function (msg, bookmark) {
 		if (msg.$ === 'InputUrl') {
@@ -10640,25 +10643,34 @@ var $author$project$Main$updateEditingBookmark = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.viewMode);
-		_v0$3:
+		_v0$4:
 		while (true) {
-			if (_v0.b.$ === 'DisplayBookmarks') {
-				if ((_v0.a.$ === 'OpenEdit') && (_v0.a.a.$ === 'NewBookmark')) {
-					var _v1 = _v0.a.a;
-					var _v2 = _v0.b;
+			switch (_v0.a.$) {
+				case 'ReceiveLatestBookmarks':
+					var flags = _v0.a.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
 							{
-								viewMode: A2($author$project$Main$EditBookmark, $author$project$Main$newBookmark, $author$project$Main$NewBookmark)
+								bookmarks: $author$project$Main$decodeBookmarks(flags)
 							}),
 						$elm$core$Platform$Cmd$none);
-				} else {
-					break _v0$3;
-				}
-			} else {
-				switch (_v0.a.$) {
-					case 'Edit':
+				case 'OpenEdit':
+					if ((_v0.a.a.$ === 'NewBookmark') && (_v0.b.$ === 'DisplayBookmarks')) {
+						var _v1 = _v0.a.a;
+						var _v2 = _v0.b;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									viewMode: A2($author$project$Main$EditBookmark, $author$project$Main$newBookmark, $author$project$Main$NewBookmark)
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						break _v0$4;
+					}
+				case 'Edit':
+					if (_v0.b.$ === 'EditBookmark') {
 						var editMsg = _v0.a.a;
 						var _v3 = _v0.b;
 						var bookmark = _v3.a;
@@ -10672,30 +10684,30 @@ var $author$project$Main$update = F2(
 								model,
 								{viewMode: newViewMode}),
 							$elm$core$Platform$Cmd$none);
-					case 'Save':
-						if (_v0.b.b.$ === 'NewBookmark') {
-							var _v4 = _v0.a;
-							var _v5 = _v0.b;
-							var bookmark = _v5.a;
-							var _v6 = _v5.b;
-							return _Utils_Tuple2(
-								_Utils_update(
-									model,
-									{
-										bookmarks: _Utils_ap(
-											model.bookmarks,
-											_List_fromArray(
-												[bookmark])),
-										viewMode: $author$project$Main$DisplayBookmarks
-									}),
-								$author$project$Main$addBookmark(
-									_Utils_Tuple2(bookmark.url, bookmark.title)));
-						} else {
-							break _v0$3;
-						}
-					default:
-						break _v0$3;
-				}
+					} else {
+						break _v0$4;
+					}
+				case 'Save':
+					if ((_v0.b.$ === 'EditBookmark') && (_v0.b.b.$ === 'NewBookmark')) {
+						var _v4 = _v0.a;
+						var _v5 = _v0.b;
+						var bookmark = _v5.a;
+						var _v6 = _v5.b;
+						var updatedBookmarks = _Utils_ap(
+							model.bookmarks,
+							_List_fromArray(
+								[bookmark]));
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{bookmarks: updatedBookmarks, viewMode: $author$project$Main$DisplayBookmarks}),
+							$author$project$Main$updateBookmarks(
+								$author$project$Main$encodeBookmarks(updatedBookmarks)));
+					} else {
+						break _v0$4;
+					}
+				default:
+					break _v0$4;
 			}
 		}
 		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
