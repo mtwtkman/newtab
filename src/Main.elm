@@ -169,7 +169,6 @@ type ViewMode
 
 type Msg
     = LoadBookmarks
-    | ReadDefaultBookmarks String
     | ReceiveLatestBookmarks Flags
     | OpenEdit EditType
     | Edit EditMsg
