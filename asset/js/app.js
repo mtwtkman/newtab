@@ -10902,6 +10902,12 @@ var $elm$http$Http$expectJson = F2(
 						A2($elm$json$Json$Decode$decodeString, decoder, string));
 				}));
 	});
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$Main$exportBookmarks = _Platform_outgoingPort(
+	'exportBookmarks',
+	function ($) {
+		return $elm$json$Json$Encode$null;
+	});
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -11217,7 +11223,7 @@ var $author$project$Main$updateEditingBookmark = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.viewMode);
-		_v0$12:
+		_v0$13:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ReceiveLatestBookmarks':
@@ -11242,7 +11248,7 @@ var $author$project$Main$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						} else {
-							break _v0$12;
+							break _v0$13;
 						}
 					} else {
 						if (_v0.b.$ === 'DisplayBookmarks') {
@@ -11261,7 +11267,7 @@ var $author$project$Main$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						} else {
-							break _v0$12;
+							break _v0$13;
 						}
 					}
 				case 'Edit':
@@ -11280,7 +11286,7 @@ var $author$project$Main$update = F2(
 								{viewMode: newViewMode}),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						break _v0$12;
+						break _v0$13;
 					}
 				case 'Save':
 					if (_v0.b.$ === 'EditBookmark') {
@@ -11319,7 +11325,7 @@ var $author$project$Main$update = F2(
 									$author$project$Main$encodeBookmarks(updatedBookmarks)));
 						}
 					} else {
-						break _v0$12;
+						break _v0$13;
 					}
 				case 'Remove':
 					var index = _v0.a.a;
@@ -11358,7 +11364,7 @@ var $author$project$Main$update = F2(
 								}),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						break _v0$12;
+						break _v0$13;
 					}
 				case 'InputLoaderSource':
 					if (_v0.b.$ === 'Loader') {
@@ -11373,7 +11379,7 @@ var $author$project$Main$update = F2(
 								}),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						break _v0$12;
+						break _v0$13;
 					}
 				case 'FetchSource':
 					if (_v0.b.$ === 'Loader') {
@@ -11387,7 +11393,7 @@ var $author$project$Main$update = F2(
 									url: url
 								}));
 					} else {
-						break _v0$12;
+						break _v0$13;
 					}
 				case 'GotSource':
 					var result = _v0.a.a;
@@ -11407,7 +11413,10 @@ var $author$project$Main$update = F2(
 								$author$project$Main$encodeBookmarks(bookmarks)));
 					}
 				default:
-					break _v0$12;
+					var _v18 = _v0.a;
+					return _Utils_Tuple2(
+						model,
+						$author$project$Main$exportBookmarks(_Utils_Tuple0));
 			}
 		}
 		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -11645,6 +11654,23 @@ var $author$project$Main$bookmarkListView = function (model) {
 			]),
 		A2($elm$core$List$indexedMap, $author$project$Main$bookmarkView, model.bookmarks));
 };
+var $author$project$Main$ExportBookmarks = {$: 'ExportBookmarks'};
+var $author$project$Main$exportBookmarksButton = A3(
+	$author$project$Main$buttonViewWrapper,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('export-bookmarks-button')
+		]),
+	'export',
+	$author$project$Main$ExportBookmarks);
+var $author$project$Main$exportBookmarksView = A2(
+	$elm$html$Html$div,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('export-bookmarks-wrapper')
+		]),
+	_List_fromArray(
+		[$author$project$Main$exportBookmarksButton]));
 var $author$project$Main$LoadBookmarks = {$: 'LoadBookmarks'};
 var $author$project$Main$loaderSettingButtonView = A3(
 	$author$project$Main$buttonViewWrapper,
@@ -11705,12 +11731,15 @@ var $author$project$Main$view = function (model) {
 			var _v0 = model.viewMode;
 			switch (_v0.$) {
 				case 'DisplayBookmarks':
-					return _List_fromArray(
-						[
-							$author$project$Main$bookmarkListView(model),
-							$author$project$Main$newBookmarkAddButtonView,
-							$author$project$Main$loaderSettingButtonView
-						]);
+					return _Utils_ap(
+						_List_fromArray(
+							[
+								$author$project$Main$bookmarkListView(model),
+								$author$project$Main$newBookmarkAddButtonView,
+								$author$project$Main$loaderSettingButtonView
+							]),
+						$elm$core$List$isEmpty(model.bookmarks) ? _List_Nil : _List_fromArray(
+							[$author$project$Main$exportBookmarksView]));
 				case 'EditBookmark':
 					if (_v0.b.$ === 'NewBookmark') {
 						var bookmark = _v0.a;
@@ -11735,4 +11764,4 @@ var $author$project$Main$view = function (model) {
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.Bookmark":{"args":[],"type":"{ url : Main.Url, title : Main.Title }"},"Main.Flags":{"args":[],"type":"Json.Decode.Value"},"Main.Title":{"args":[],"type":"String.String"},"Main.Url":{"args":[],"type":"String.String"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"LoadBookmarks":[],"ReadDefaultBookmarks":["String.String"],"ReceiveLatestBookmarks":["Main.Flags"],"OpenEdit":["Main.EditType"],"Edit":["Main.EditMsg"],"Save":[],"Cancel":[],"Remove":["Basics.Int"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Main.Bookmark)"],"InputLoaderSource":["String.String"]}},"Main.EditMsg":{"args":[],"tags":{"InputUrl":["Main.Url"],"InputTitle":["Main.Title"]}},"Main.EditType":{"args":[],"tags":{"NewBookmark":[],"KnownBookmark":["Basics.Int","Main.Bookmark"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.Bookmark":{"args":[],"type":"{ url : Main.Url, title : Main.Title }"},"Main.Flags":{"args":[],"type":"Json.Decode.Value"},"Main.Title":{"args":[],"type":"String.String"},"Main.Url":{"args":[],"type":"String.String"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"LoadBookmarks":[],"ReceiveLatestBookmarks":["Main.Flags"],"OpenEdit":["Main.EditType"],"Edit":["Main.EditMsg"],"Save":[],"Cancel":[],"Remove":["Basics.Int"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Main.Bookmark)"],"InputLoaderSource":["String.String"],"ExportBookmarks":[]}},"Main.EditMsg":{"args":[],"tags":{"InputUrl":["Main.Url"],"InputTitle":["Main.Title"]}},"Main.EditType":{"args":[],"tags":{"NewBookmark":[],"KnownBookmark":["Basics.Int","Main.Bookmark"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));

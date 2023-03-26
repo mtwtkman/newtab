@@ -34,6 +34,9 @@ port updateBookmarks : E.Value -> Cmd msg
 port messageReceiver : (Flags -> msg) -> Sub msg
 
 
+port exportBookmarks : () -> Cmd msg
+
+
 
 -- INIT
 
@@ -178,6 +181,7 @@ type Msg
     | FetchSource
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
+    | ExportBookmarks
 
 
 type EditMsg
@@ -279,6 +283,9 @@ update msg model =
                     , updateBookmarks (encodeBookmarks bookmarks)
                     )
 
+        ( ExportBookmarks, _ ) ->
+            ( model, exportBookmarks () )
+
         _ ->
             ( model, Cmd.none )
 
@@ -307,6 +314,12 @@ view model =
                 , newBookmarkAddButtonView
                 , loaderSettingButtonView
                 ]
+                    ++ (if List.isEmpty model.bookmarks then
+                            []
+
+                        else
+                            [ exportBookmarksView ]
+                       )
 
             EditBookmark bookmark NewBookmark ->
                 [ bookmarkEditorView bookmark
@@ -431,6 +444,22 @@ loaderView =
             [ class "fetch-source" ]
             "fetch"
             FetchSource
+        ]
+
+
+exportBookmarksButton : Html Msg
+exportBookmarksButton =
+    buttonViewWrapper
+        [ class "export-bookmarks-button" ]
+        "export"
+        ExportBookmarks
+
+
+exportBookmarksView : Html Msg
+exportBookmarksView =
+    div
+        [ class "export-bookmarks-wrapper" ]
+        [ exportBookmarksButton
         ]
 
 
