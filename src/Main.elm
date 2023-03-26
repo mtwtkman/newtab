@@ -1,7 +1,6 @@
 port module Main exposing (main)
 
 import Browser exposing (element)
-import Dict exposing (Dict)
 import Html exposing (Html, a, button, div, img, input, text)
 import Html.Attributes exposing (class, href, src, value)
 import Html.Events exposing (onClick, onInput)
@@ -92,7 +91,7 @@ encodeBookmark bookmark =
 
 encodeBookmarks : List Bookmark -> E.Value
 encodeBookmarks bookmarks =
-  E.list encodeBookmark bookmarks
+    E.list encodeBookmark bookmarks
 
 
 
@@ -204,14 +203,30 @@ update msg model =
 
         ( Save, EditBookmark bookmark NewBookmark ) ->
             let
-                updatedBookmarks = model.bookmarks ++ [bookmark]
+                updatedBookmarks =
+                    model.bookmarks ++ [ bookmark ]
             in
-
             ( { model
                 | viewMode = DisplayBookmarks
                 , bookmarks = updatedBookmarks
               }
             , updateBookmarks (encodeBookmarks updatedBookmarks)
+            )
+
+        ( Remove index, _ ) ->
+            let
+                updatedBookmarks =
+                    List.indexedMap Tuple.pair model.bookmarks
+                        |> List.filter (\( i, _ ) -> i /= index)
+                        |> List.map Tuple.second
+            in
+            ( { model | bookmarks = updatedBookmarks }
+            , updateBookmarks (encodeBookmarks updatedBookmarks)
+            )
+
+        ( Cancel, _ ) ->
+            ( { model | viewMode = DisplayBookmarks }
+            , Cmd.none
             )
 
         _ ->
@@ -315,17 +330,20 @@ bookmarkListView : Model -> Html Msg
 bookmarkListView model =
     div
         [ class "bookmark-list" ]
-        (List.map bookmarkView model.bookmarks)
+        (List.indexedMap bookmarkView model.bookmarks)
 
 
-bookmarkView : Bookmark -> Html Msg
-bookmarkView bookmark =
+bookmarkView : Int -> Bookmark -> Html Msg
+bookmarkView i bookmark =
     div [ class "bookmark-item" ]
         [ a
             [ href bookmark.url ]
             [ img [ defaultSizedFaviconUrl bookmark |> src ] []
             , text bookmark.title
             ]
+        , button
+            [ onClick (Remove i) ]
+            [ text "-" ]
         ]
 
 

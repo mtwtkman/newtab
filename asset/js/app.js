@@ -10624,7 +10624,22 @@ var $author$project$Main$encodeBookmark = function (bookmark) {
 var $author$project$Main$encodeBookmarks = function (bookmarks) {
 	return A2($elm$json$Json$Encode$list, $author$project$Main$encodeBookmark, bookmarks);
 };
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
 var $author$project$Main$newBookmark = {title: '', url: ''};
+var $elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
 var $author$project$Main$updateBookmarks = _Platform_outgoingPort('updateBookmarks', $elm$core$Basics$identity);
 var $author$project$Main$updateEditingBookmark = F2(
 	function (msg, bookmark) {
@@ -10643,7 +10658,7 @@ var $author$project$Main$updateEditingBookmark = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.viewMode);
-		_v0$4:
+		_v0$6:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ReceiveLatestBookmarks':
@@ -10667,7 +10682,7 @@ var $author$project$Main$update = F2(
 								}),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						break _v0$4;
+						break _v0$6;
 					}
 				case 'Edit':
 					if (_v0.b.$ === 'EditBookmark') {
@@ -10685,7 +10700,7 @@ var $author$project$Main$update = F2(
 								{viewMode: newViewMode}),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						break _v0$4;
+						break _v0$6;
 					}
 				case 'Save':
 					if ((_v0.b.$ === 'EditBookmark') && (_v0.b.b.$ === 'NewBookmark')) {
@@ -10704,10 +10719,35 @@ var $author$project$Main$update = F2(
 							$author$project$Main$updateBookmarks(
 								$author$project$Main$encodeBookmarks(updatedBookmarks)));
 					} else {
-						break _v0$4;
+						break _v0$6;
 					}
+				case 'Remove':
+					var index = _v0.a.a;
+					var updatedBookmarks = A2(
+						$elm$core$List$map,
+						$elm$core$Tuple$second,
+						A2(
+							$elm$core$List$filter,
+							function (_v7) {
+								var i = _v7.a;
+								return !_Utils_eq(i, index);
+							},
+							A2($elm$core$List$indexedMap, $elm$core$Tuple$pair, model.bookmarks)));
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{bookmarks: updatedBookmarks}),
+						$author$project$Main$updateBookmarks(
+							$author$project$Main$encodeBookmarks(updatedBookmarks)));
+				case 'Cancel':
+					var _v8 = _v0.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{viewMode: $author$project$Main$DisplayBookmarks}),
+						$elm$core$Platform$Cmd$none);
 				default:
-					break _v0$4;
+					break _v0$6;
 			}
 		}
 		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -10814,6 +10854,9 @@ var $author$project$Main$bookmarkEditorView = function (bookmark) {
 				$author$project$Main$cancelButtonView
 			]));
 };
+var $author$project$Main$Remove = function (a) {
+	return {$: 'Remove', a: a};
+};
 var $elm$url$Url$Builder$toQueryPair = function (_v0) {
 	var key = _v0.a;
 	var value = _v0.b;
@@ -10880,35 +10923,47 @@ var $elm$html$Html$Attributes$src = function (url) {
 		'src',
 		_VirtualDom_noJavaScriptOrHtmlUri(url));
 };
-var $author$project$Main$bookmarkView = function (bookmark) {
-	return A2(
-		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('bookmark-item')
-			]),
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$a,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$href(bookmark.url)
-					]),
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$img,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$src(
-								$author$project$Main$defaultSizedFaviconUrl(bookmark))
-							]),
-						_List_Nil),
-						$elm$html$Html$text(bookmark.title)
-					]))
-			]));
-};
+var $author$project$Main$bookmarkView = F2(
+	function (i, bookmark) {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('bookmark-item')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$a,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$href(bookmark.url)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$img,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$src(
+									$author$project$Main$defaultSizedFaviconUrl(bookmark))
+								]),
+							_List_Nil),
+							$elm$html$Html$text(bookmark.title)
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							$author$project$Main$Remove(i))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('-')
+						]))
+				]));
+	});
 var $author$project$Main$bookmarkListView = function (model) {
 	return A2(
 		$elm$html$Html$div,
@@ -10916,7 +10971,7 @@ var $author$project$Main$bookmarkListView = function (model) {
 			[
 				$elm$html$Html$Attributes$class('bookmark-list')
 			]),
-		A2($elm$core$List$map, $author$project$Main$bookmarkView, model.bookmarks));
+		A2($elm$core$List$indexedMap, $author$project$Main$bookmarkView, model.bookmarks));
 };
 var $author$project$Main$OpenEdit = function (a) {
 	return {$: 'OpenEdit', a: a};
