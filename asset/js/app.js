@@ -4955,6 +4955,181 @@ function _Browser_load(url)
 }
 
 
+
+// SEND REQUEST
+
+var _Http_toTask = F3(function(router, toTask, request)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		function done(response) {
+			callback(toTask(request.expect.a(response)));
+		}
+
+		var xhr = new XMLHttpRequest();
+		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
+		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.expect.b, xhr)); });
+		$elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
+
+		try {
+			xhr.open(request.method, request.url, true);
+		} catch (e) {
+			return done($elm$http$Http$BadUrl_(request.url));
+		}
+
+		_Http_configureRequest(xhr, request);
+
+		request.body.a && xhr.setRequestHeader('Content-Type', request.body.a);
+		xhr.send(request.body.b);
+
+		return function() { xhr.c = true; xhr.abort(); };
+	});
+});
+
+
+// CONFIGURE
+
+function _Http_configureRequest(xhr, request)
+{
+	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
+	{
+		xhr.setRequestHeader(headers.a.a, headers.a.b);
+	}
+	xhr.timeout = request.timeout.a || 0;
+	xhr.responseType = request.expect.d;
+	xhr.withCredentials = request.allowCookiesFromOtherDomains;
+}
+
+
+// RESPONSES
+
+function _Http_toResponse(toBody, xhr)
+{
+	return A2(
+		200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
+		_Http_toMetadata(xhr),
+		toBody(xhr.response)
+	);
+}
+
+
+// METADATA
+
+function _Http_toMetadata(xhr)
+{
+	return {
+		url: xhr.responseURL,
+		statusCode: xhr.status,
+		statusText: xhr.statusText,
+		headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
+	};
+}
+
+
+// HEADERS
+
+function _Http_parseHeaders(rawHeaders)
+{
+	if (!rawHeaders)
+	{
+		return $elm$core$Dict$empty;
+	}
+
+	var headers = $elm$core$Dict$empty;
+	var headerPairs = rawHeaders.split('\r\n');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf(': ');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3($elm$core$Dict$update, key, function(oldValue) {
+				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
+					? value + ', ' + oldValue.a
+					: value
+				);
+			}, headers);
+		}
+	}
+	return headers;
+}
+
+
+// EXPECT
+
+var _Http_expect = F3(function(type, toBody, toValue)
+{
+	return {
+		$: 0,
+		d: type,
+		b: toBody,
+		a: toValue
+	};
+});
+
+var _Http_mapExpect = F2(function(func, expect)
+{
+	return {
+		$: 0,
+		d: expect.d,
+		b: expect.b,
+		a: function(x) { return func(expect.a(x)); }
+	};
+});
+
+function _Http_toDataView(arrayBuffer)
+{
+	return new DataView(arrayBuffer);
+}
+
+
+// BODY and PARTS
+
+var _Http_emptyBody = { $: 0 };
+var _Http_pair = F2(function(a, b) { return { $: 0, a: a, b: b }; });
+
+function _Http_toFormData(parts)
+{
+	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
+	{
+		var part = parts.a;
+		formData.append(part.a, part.b);
+	}
+	return formData;
+}
+
+var _Http_bytesToBlob = F2(function(mime, bytes)
+{
+	return new Blob([bytes], { type: mime });
+});
+
+
+// PROGRESS
+
+function _Http_track(router, xhr, tracker)
+{
+	// TODO check out lengthComputable on loadstart event
+
+	xhr.upload.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
+			sent: event.loaded,
+			size: event.total
+		}))));
+	});
+	xhr.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
+			received: event.loaded,
+			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+		}))));
+	});
+}
+
 function _Url_percentEncode(string)
 {
 	return encodeURIComponent(string);
@@ -10608,10 +10783,16 @@ var $author$project$Main$EditBookmark = F2(
 	function (a, b) {
 		return {$: 'EditBookmark', a: a, b: b};
 	});
+var $author$project$Main$GotSource = function (a) {
+	return {$: 'GotSource', a: a};
+};
 var $author$project$Main$KnownBookmark = F2(
 	function (a, b) {
 		return {$: 'KnownBookmark', a: a, b: b};
 	});
+var $author$project$Main$Loader = function (a) {
+	return {$: 'Loader', a: a};
+};
 var $author$project$Main$NewBookmark = {$: 'NewBookmark'};
 var $author$project$Main$encodeBookmark = function (bookmark) {
 	return $elm$json$Json$Encode$object(
@@ -10628,6 +10809,99 @@ var $author$project$Main$encodeBookmark = function (bookmark) {
 var $author$project$Main$encodeBookmarks = function (bookmarks) {
 	return A2($elm$json$Json$Encode$list, $author$project$Main$encodeBookmark, bookmarks);
 };
+var $elm$http$Http$BadStatus_ = F2(
+	function (a, b) {
+		return {$: 'BadStatus_', a: a, b: b};
+	});
+var $elm$http$Http$BadUrl_ = function (a) {
+	return {$: 'BadUrl_', a: a};
+};
+var $elm$http$Http$GoodStatus_ = F2(
+	function (a, b) {
+		return {$: 'GoodStatus_', a: a, b: b};
+	});
+var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
+var $elm$http$Http$Receiving = function (a) {
+	return {$: 'Receiving', a: a};
+};
+var $elm$http$Http$Sending = function (a) {
+	return {$: 'Sending', a: a};
+};
+var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+var $elm$http$Http$expectStringResponse = F2(
+	function (toMsg, toResult) {
+		return A3(
+			_Http_expect,
+			'',
+			$elm$core$Basics$identity,
+			A2($elm$core$Basics$composeR, toResult, toMsg));
+	});
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
+		}
+	});
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
+var $elm$http$Http$resolve = F2(
+	function (toResult, response) {
+		switch (response.$) {
+			case 'BadUrl_':
+				var url = response.a;
+				return $elm$core$Result$Err(
+					$elm$http$Http$BadUrl(url));
+			case 'Timeout_':
+				return $elm$core$Result$Err($elm$http$Http$Timeout);
+			case 'NetworkError_':
+				return $elm$core$Result$Err($elm$http$Http$NetworkError);
+			case 'BadStatus_':
+				var metadata = response.a;
+				return $elm$core$Result$Err(
+					$elm$http$Http$BadStatus(metadata.statusCode));
+			default:
+				var body = response.b;
+				return A2(
+					$elm$core$Result$mapError,
+					$elm$http$Http$BadBody,
+					toResult(body));
+		}
+	});
+var $elm$http$Http$expectJson = F2(
+	function (toMsg, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			$elm$http$Http$resolve(
+				function (string) {
+					return A2(
+						$elm$core$Result$mapError,
+						$elm$json$Json$Decode$errorToString,
+						A2($elm$json$Json$Decode$decodeString, decoder, string));
+				}));
+	});
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -10639,6 +10913,161 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
+var $elm$http$Http$emptyBody = _Http_emptyBody;
+var $elm$http$Http$Request = function (a) {
+	return {$: 'Request', a: a};
+};
+var $elm$http$Http$State = F2(
+	function (reqs, subs) {
+		return {reqs: reqs, subs: subs};
+	});
+var $elm$http$Http$init = $elm$core$Task$succeed(
+	A2($elm$http$Http$State, $elm$core$Dict$empty, _List_Nil));
+var $elm$core$Process$kill = _Scheduler_kill;
+var $elm$core$Process$spawn = _Scheduler_spawn;
+var $elm$http$Http$updateReqs = F3(
+	function (router, cmds, reqs) {
+		updateReqs:
+		while (true) {
+			if (!cmds.b) {
+				return $elm$core$Task$succeed(reqs);
+			} else {
+				var cmd = cmds.a;
+				var otherCmds = cmds.b;
+				if (cmd.$ === 'Cancel') {
+					var tracker = cmd.a;
+					var _v2 = A2($elm$core$Dict$get, tracker, reqs);
+					if (_v2.$ === 'Nothing') {
+						var $temp$router = router,
+							$temp$cmds = otherCmds,
+							$temp$reqs = reqs;
+						router = $temp$router;
+						cmds = $temp$cmds;
+						reqs = $temp$reqs;
+						continue updateReqs;
+					} else {
+						var pid = _v2.a;
+						return A2(
+							$elm$core$Task$andThen,
+							function (_v3) {
+								return A3(
+									$elm$http$Http$updateReqs,
+									router,
+									otherCmds,
+									A2($elm$core$Dict$remove, tracker, reqs));
+							},
+							$elm$core$Process$kill(pid));
+					}
+				} else {
+					var req = cmd.a;
+					return A2(
+						$elm$core$Task$andThen,
+						function (pid) {
+							var _v4 = req.tracker;
+							if (_v4.$ === 'Nothing') {
+								return A3($elm$http$Http$updateReqs, router, otherCmds, reqs);
+							} else {
+								var tracker = _v4.a;
+								return A3(
+									$elm$http$Http$updateReqs,
+									router,
+									otherCmds,
+									A3($elm$core$Dict$insert, tracker, pid, reqs));
+							}
+						},
+						$elm$core$Process$spawn(
+							A3(
+								_Http_toTask,
+								router,
+								$elm$core$Platform$sendToApp(router),
+								req)));
+				}
+			}
+		}
+	});
+var $elm$http$Http$onEffects = F4(
+	function (router, cmds, subs, state) {
+		return A2(
+			$elm$core$Task$andThen,
+			function (reqs) {
+				return $elm$core$Task$succeed(
+					A2($elm$http$Http$State, reqs, subs));
+			},
+			A3($elm$http$Http$updateReqs, router, cmds, state.reqs));
+	});
+var $elm$http$Http$maybeSend = F4(
+	function (router, desiredTracker, progress, _v0) {
+		var actualTracker = _v0.a;
+		var toMsg = _v0.b;
+		return _Utils_eq(desiredTracker, actualTracker) ? $elm$core$Maybe$Just(
+			A2(
+				$elm$core$Platform$sendToApp,
+				router,
+				toMsg(progress))) : $elm$core$Maybe$Nothing;
+	});
+var $elm$http$Http$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var tracker = _v0.a;
+		var progress = _v0.b;
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$filterMap,
+					A3($elm$http$Http$maybeSend, router, tracker, progress),
+					state.subs)));
+	});
+var $elm$http$Http$Cancel = function (a) {
+	return {$: 'Cancel', a: a};
+};
+var $elm$http$Http$cmdMap = F2(
+	function (func, cmd) {
+		if (cmd.$ === 'Cancel') {
+			var tracker = cmd.a;
+			return $elm$http$Http$Cancel(tracker);
+		} else {
+			var r = cmd.a;
+			return $elm$http$Http$Request(
+				{
+					allowCookiesFromOtherDomains: r.allowCookiesFromOtherDomains,
+					body: r.body,
+					expect: A2(_Http_mapExpect, func, r.expect),
+					headers: r.headers,
+					method: r.method,
+					timeout: r.timeout,
+					tracker: r.tracker,
+					url: r.url
+				});
+		}
+	});
+var $elm$http$Http$MySub = F2(
+	function (a, b) {
+		return {$: 'MySub', a: a, b: b};
+	});
+var $elm$http$Http$subMap = F2(
+	function (func, _v0) {
+		var tracker = _v0.a;
+		var toMsg = _v0.b;
+		return A2(
+			$elm$http$Http$MySub,
+			tracker,
+			A2($elm$core$Basics$composeR, toMsg, func));
+	});
+_Platform_effectManagers['Http'] = _Platform_createManager($elm$http$Http$init, $elm$http$Http$onEffects, $elm$http$Http$onSelfMsg, $elm$http$Http$cmdMap, $elm$http$Http$subMap);
+var $elm$http$Http$command = _Platform_leaf('Http');
+var $elm$http$Http$subscription = _Platform_leaf('Http');
+var $elm$http$Http$request = function (r) {
+	return $elm$http$Http$command(
+		$elm$http$Http$Request(
+			{allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url}));
+};
+var $elm$http$Http$get = function (r) {
+	return $elm$http$Http$request(
+		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
 var $author$project$Main$newBookmark = {title: '', url: ''};
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
@@ -10788,7 +11217,7 @@ var $author$project$Main$updateEditingBookmark = F2(
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.viewMode);
-		_v0$8:
+		_v0$12:
 		while (true) {
 			switch (_v0.a.$) {
 				case 'ReceiveLatestBookmarks':
@@ -10813,7 +11242,7 @@ var $author$project$Main$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						} else {
-							break _v0$8;
+							break _v0$12;
 						}
 					} else {
 						if (_v0.b.$ === 'DisplayBookmarks') {
@@ -10832,7 +11261,7 @@ var $author$project$Main$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						} else {
-							break _v0$8;
+							break _v0$12;
 						}
 					}
 				case 'Edit':
@@ -10851,7 +11280,7 @@ var $author$project$Main$update = F2(
 								{viewMode: newViewMode}),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						break _v0$8;
+						break _v0$12;
 					}
 				case 'Save':
 					if (_v0.b.$ === 'EditBookmark') {
@@ -10890,7 +11319,7 @@ var $author$project$Main$update = F2(
 									$author$project$Main$encodeBookmarks(updatedBookmarks)));
 						}
 					} else {
-						break _v0$8;
+						break _v0$12;
 					}
 				case 'Remove':
 					var index = _v0.a.a;
@@ -10917,32 +11346,100 @@ var $author$project$Main$update = F2(
 							model,
 							{viewMode: $author$project$Main$DisplayBookmarks}),
 						$elm$core$Platform$Cmd$none);
+				case 'LoadBookmarks':
+					if (_v0.b.$ === 'DisplayBookmarks') {
+						var _v14 = _v0.a;
+						var _v15 = _v0.b;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									viewMode: $author$project$Main$Loader('')
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						break _v0$12;
+					}
+				case 'InputLoaderSource':
+					if (_v0.b.$ === 'Loader') {
+						var val = _v0.a.a;
+						var v = _v0.b.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									viewMode: $author$project$Main$Loader(
+										_Utils_ap(v, val))
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						break _v0$12;
+					}
+				case 'FetchSource':
+					if (_v0.b.$ === 'Loader') {
+						var _v16 = _v0.a;
+						var url = _v0.b.a;
+						return _Utils_Tuple2(
+							model,
+							$elm$http$Http$get(
+								{
+									expect: A2($elm$http$Http$expectJson, $author$project$Main$GotSource, $author$project$Main$bookmarksDecoder),
+									url: url
+								}));
+					} else {
+						break _v0$12;
+					}
+				case 'GotSource':
+					var result = _v0.a.a;
+					if (result.$ === 'Err') {
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{viewMode: $author$project$Main$DisplayBookmarks}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var bookmarks = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{bookmarks: bookmarks, viewMode: $author$project$Main$DisplayBookmarks}),
+							$author$project$Main$updateBookmarks(
+								$author$project$Main$encodeBookmarks(bookmarks)));
+					}
 				default:
-					break _v0$8;
+					break _v0$12;
 			}
 		}
 		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 	});
 var $author$project$Main$Cancel = {$: 'Cancel'};
-var $author$project$Main$cancelButtonView = A2(
-	$elm$html$Html$div,
+var $author$project$Main$buttonViewWrapper = F3(
+	function (attrs, label, msg) {
+		return A2(
+			$elm$html$Html$div,
+			attrs,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(msg)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(label)
+						]))
+				]));
+	});
+var $author$project$Main$cancelButtonView = A3(
+	$author$project$Main$buttonViewWrapper,
 	_List_fromArray(
 		[
 			$elm$html$Html$Attributes$class('cancel')
 		]),
-	_List_fromArray(
-		[
-			A2(
-			$elm$html$Html$button,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onClick($author$project$Main$Cancel)
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('cancel')
-				]))
-		]));
+	'cancel',
+	$author$project$Main$Cancel);
 var $author$project$Main$Edit = function (a) {
 	return {$: 'Edit', a: a};
 };
@@ -10952,7 +11449,7 @@ var $author$project$Main$InputTitle = function (a) {
 var $author$project$Main$InputUrl = function (a) {
 	return {$: 'InputUrl', a: a};
 };
-var $author$project$Main$inputView = F3(
+var $author$project$Main$inputViewWrapper = F3(
 	function (label, inputValue, handler) {
 		return A2(
 			$elm$html$Html$div,
@@ -10984,33 +11481,22 @@ var $author$project$Main$inputFormView = function (bookmark) {
 				A2(
 				$elm$html$Html$map,
 				$author$project$Main$Edit,
-				A3($author$project$Main$inputView, 'title', bookmark.title, $author$project$Main$InputTitle)),
+				A3($author$project$Main$inputViewWrapper, 'title', bookmark.title, $author$project$Main$InputTitle)),
 				A2(
 				$elm$html$Html$map,
 				$author$project$Main$Edit,
-				A3($author$project$Main$inputView, 'url', bookmark.url, $author$project$Main$InputUrl))
+				A3($author$project$Main$inputViewWrapper, 'url', bookmark.url, $author$project$Main$InputUrl))
 			]));
 };
 var $author$project$Main$Save = {$: 'Save'};
-var $author$project$Main$saveButtonView = A2(
-	$elm$html$Html$div,
+var $author$project$Main$saveButtonView = A3(
+	$author$project$Main$buttonViewWrapper,
 	_List_fromArray(
 		[
 			$elm$html$Html$Attributes$class('save')
 		]),
-	_List_fromArray(
-		[
-			A2(
-			$elm$html$Html$button,
-			_List_fromArray(
-				[
-					$elm$html$Html$Events$onClick($author$project$Main$Save)
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('save')
-				]))
-		]));
+	'save',
+	$author$project$Main$Save);
 var $author$project$Main$bookmarkEditorView = function (bookmark) {
 	return A2(
 		$elm$html$Html$div,
@@ -11159,6 +11645,43 @@ var $author$project$Main$bookmarkListView = function (model) {
 			]),
 		A2($elm$core$List$indexedMap, $author$project$Main$bookmarkView, model.bookmarks));
 };
+var $author$project$Main$LoadBookmarks = {$: 'LoadBookmarks'};
+var $author$project$Main$loaderSettingButtonView = A3(
+	$author$project$Main$buttonViewWrapper,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('loader-setting')
+		]),
+	'load',
+	$author$project$Main$LoadBookmarks);
+var $author$project$Main$FetchSource = {$: 'FetchSource'};
+var $author$project$Main$InputLoaderSource = function (a) {
+	return {$: 'InputLoaderSource', a: a};
+};
+var $author$project$Main$loaderView = A2(
+	$elm$html$Html$div,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$class('loader-wrapper')
+		]),
+	_List_fromArray(
+		[
+			A2(
+			$elm$html$Html$input,
+			_List_fromArray(
+				[
+					$elm$html$Html$Events$onInput($author$project$Main$InputLoaderSource)
+				]),
+			_List_Nil),
+			A3(
+			$author$project$Main$buttonViewWrapper,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('fetch-source')
+				]),
+			'fetch',
+			$author$project$Main$FetchSource)
+		]));
 var $author$project$Main$newBookmarkAddButtonView = A2(
 	$elm$html$Html$button,
 	_List_fromArray(
@@ -11180,31 +11703,36 @@ var $author$project$Main$view = function (model) {
 			]),
 		function () {
 			var _v0 = model.viewMode;
-			if (_v0.$ === 'DisplayBookmarks') {
-				return _List_fromArray(
-					[
-						$author$project$Main$bookmarkListView(model),
-						$author$project$Main$newBookmarkAddButtonView
-					]);
-			} else {
-				if (_v0.b.$ === 'NewBookmark') {
-					var bookmark = _v0.a;
-					var _v1 = _v0.b;
+			switch (_v0.$) {
+				case 'DisplayBookmarks':
 					return _List_fromArray(
 						[
-							$author$project$Main$bookmarkEditorView(bookmark)
+							$author$project$Main$bookmarkListView(model),
+							$author$project$Main$newBookmarkAddButtonView,
+							$author$project$Main$loaderSettingButtonView
 						]);
-				} else {
-					var bookmark = _v0.a;
-					var _v2 = _v0.b;
+				case 'EditBookmark':
+					if (_v0.b.$ === 'NewBookmark') {
+						var bookmark = _v0.a;
+						var _v1 = _v0.b;
+						return _List_fromArray(
+							[
+								$author$project$Main$bookmarkEditorView(bookmark)
+							]);
+					} else {
+						var bookmark = _v0.a;
+						var _v2 = _v0.b;
+						return _List_fromArray(
+							[
+								$author$project$Main$bookmarkEditorView(bookmark)
+							]);
+					}
+				default:
 					return _List_fromArray(
-						[
-							$author$project$Main$bookmarkEditorView(bookmark)
-						]);
-				}
+						[$author$project$Main$loaderView]);
 			}
 		}());
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.Flags":{"args":[],"type":"Json.Decode.Value"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"},"Main.Bookmark":{"args":[],"type":"{ url : Main.Url, title : Main.Title }"},"Main.Title":{"args":[],"type":"String.String"},"Main.Url":{"args":[],"type":"String.String"}},"unions":{"Main.Msg":{"args":[],"tags":{"LoadBookmarks":[],"ReadDefaultBookmarks":["String.String"],"ReceiveLatestBookmarks":["Main.Flags"],"OpenEdit":["Main.EditType"],"Edit":["Main.EditMsg"],"Save":[],"Cancel":[],"Remove":["Basics.Int"]}},"Main.EditMsg":{"args":[],"tags":{"InputUrl":["Main.Url"],"InputTitle":["Main.Title"]}},"Main.EditType":{"args":[],"tags":{"NewBookmark":[],"KnownBookmark":["Basics.Int","Main.Bookmark"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.Bookmark":{"args":[],"type":"{ url : Main.Url, title : Main.Title }"},"Main.Flags":{"args":[],"type":"Json.Decode.Value"},"Main.Title":{"args":[],"type":"String.String"},"Main.Url":{"args":[],"type":"String.String"},"Json.Decode.Value":{"args":[],"type":"Json.Encode.Value"}},"unions":{"Main.Msg":{"args":[],"tags":{"LoadBookmarks":[],"ReadDefaultBookmarks":["String.String"],"ReceiveLatestBookmarks":["Main.Flags"],"OpenEdit":["Main.EditType"],"Edit":["Main.EditMsg"],"Save":[],"Cancel":[],"Remove":["Basics.Int"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Main.Bookmark)"],"InputLoaderSource":["String.String"]}},"Main.EditMsg":{"args":[],"tags":{"InputUrl":["Main.Url"],"InputTitle":["Main.Title"]}},"Main.EditType":{"args":[],"tags":{"NewBookmark":[],"KnownBookmark":["Basics.Int","Main.Bookmark"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Json.Encode.Value":{"args":[],"tags":{"Value":[]}}}}})}});}(this));

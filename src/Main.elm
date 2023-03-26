@@ -1,9 +1,10 @@
 port module Main exposing (main)
 
 import Browser exposing (element)
-import Html exposing (Html, a, button, div, img, input, text)
+import Html exposing (Attribute, Html, a, button, div, img, input, text)
 import Html.Attributes exposing (class, href, src, value)
 import Html.Events exposing (onClick, onInput)
+import Http
 import Json.Decode as D
 import Json.Encode as E
 import Url.Builder as UB exposing (crossOrigin)
@@ -159,6 +160,7 @@ type EditType
 type ViewMode
     = DisplayBookmarks
     | EditBookmark Bookmark EditType
+    | Loader String
 
 
 
@@ -174,6 +176,9 @@ type Msg
     | Save
     | Cancel
     | Remove Int
+    | FetchSource
+    | GotSource (Result Http.Error (List Bookmark))
+    | InputLoaderSource String
 
 
 type EditMsg
@@ -194,7 +199,7 @@ update msg model =
         ( OpenEdit NewBookmark, DisplayBookmarks ) ->
             ( { model | viewMode = EditBookmark newBookmark NewBookmark }, Cmd.none )
 
-        ( OpenEdit (KnownBookmark i bookmark ), DisplayBookmarks ) ->
+        ( OpenEdit (KnownBookmark i bookmark), DisplayBookmarks ) ->
             ( { model | viewMode = EditBookmark bookmark (KnownBookmark i bookmark) }, Cmd.none )
 
         ( Edit editMsg, EditBookmark bookmark editType ) ->
@@ -216,17 +221,17 @@ update msg model =
             , updateBookmarks (encodeBookmarks updatedBookmarks)
             )
 
-        ( Save, EditBookmark bookmark (KnownBookmark index _)) ->
+        ( Save, EditBookmark bookmark (KnownBookmark index _) ) ->
             let
-              updatedBookmarks =
-                List.take index model.bookmarks ++ (bookmark :: List.drop (index + 1) model.bookmarks)
+                updatedBookmarks =
+                    List.take index model.bookmarks ++ (bookmark :: List.drop (index + 1) model.bookmarks)
             in
-              ( { model
+            ( { model
                 | viewMode = DisplayBookmarks
                 , bookmarks = updatedBookmarks
-                }
-              , updateBookmarks  (encodeBookmarks updatedBookmarks)
-              )
+              }
+            , updateBookmarks (encodeBookmarks updatedBookmarks)
+            )
 
         ( Remove index, _ ) ->
             let
@@ -243,6 +248,37 @@ update msg model =
             ( { model | viewMode = DisplayBookmarks }
             , Cmd.none
             )
+
+        ( LoadBookmarks, DisplayBookmarks ) ->
+            ( { model | viewMode = Loader "" }
+            , Cmd.none
+            )
+
+        ( InputLoaderSource val, Loader v ) ->
+            ( { model | viewMode = Loader (v ++ val) }
+            , Cmd.none
+            )
+
+        ( FetchSource, Loader url ) ->
+            ( model
+            , Http.get
+                { url = url
+                , expect = Http.expectJson GotSource bookmarksDecoder
+                }
+            )
+
+        ( GotSource result, _ ) ->
+            case result of
+                Err _ ->
+                    ( { model | viewMode = DisplayBookmarks }, Cmd.none )
+
+                Ok bookmarks ->
+                    ( { model
+                        | bookmarks = bookmarks
+                        , viewMode = DisplayBookmarks
+                      }
+                    , updateBookmarks (encodeBookmarks bookmarks)
+                    )
 
         _ ->
             ( model, Cmd.none )
@@ -270,6 +306,7 @@ view model =
             DisplayBookmarks ->
                 [ bookmarkListView model
                 , newBookmarkAddButtonView
+                , loaderSettingButtonView
                 ]
 
             EditBookmark bookmark NewBookmark ->
@@ -278,6 +315,10 @@ view model =
 
             EditBookmark bookmark (KnownBookmark _ _) ->
                 [ bookmarkEditorView bookmark
+                ]
+
+            Loader _ ->
+                [ loaderView
                 ]
         )
 
@@ -291,8 +332,26 @@ newBookmarkAddButtonView =
         [ text "+" ]
 
 
-inputView : String -> String -> (String -> EditMsg) -> Html EditMsg
-inputView label inputValue handler =
+buttonViewWrapper : List (Attribute msg) -> String -> msg -> Html msg
+buttonViewWrapper attrs label msg =
+    div
+        attrs
+        [ button
+            [ onClick msg ]
+            [ text label ]
+        ]
+
+
+loaderSettingButtonView : Html Msg
+loaderSettingButtonView =
+    buttonViewWrapper
+        [ class "loader-setting" ]
+        "load"
+        LoadBookmarks
+
+
+inputViewWrapper : String -> String -> (String -> EditMsg) -> Html EditMsg
+inputViewWrapper label inputValue handler =
     div
         [ class ("input-" ++ label) ]
         [ input
@@ -307,29 +366,25 @@ inputFormView : Bookmark -> Html Msg
 inputFormView bookmark =
     div
         [ class "input-form" ]
-        [ Html.map Edit (inputView "title" bookmark.title InputTitle)
-        , Html.map Edit (inputView "url" bookmark.url InputUrl)
+        [ Html.map Edit (inputViewWrapper "title" bookmark.title InputTitle)
+        , Html.map Edit (inputViewWrapper "url" bookmark.url InputUrl)
         ]
 
 
 saveButtonView : Html Msg
 saveButtonView =
-    div
+    buttonViewWrapper
         [ class "save" ]
-        [ button
-            [ onClick Save ]
-            [ text "save" ]
-        ]
+        "save"
+        Save
 
 
 cancelButtonView : Html Msg
 cancelButtonView =
-    div
+    buttonViewWrapper
         [ class "cancel" ]
-        [ button
-            [ onClick Cancel ]
-            [ text "cancel" ]
-        ]
+        "cancel"
+        Cancel
 
 
 bookmarkEditorView : Bookmark -> Html Msg
@@ -363,6 +418,20 @@ bookmarkView i bookmark =
         , button
             [ onClick (Remove i) ]
             [ text "-" ]
+        ]
+
+
+loaderView : Html Msg
+loaderView =
+    div
+        [ class "loader-wrapper" ]
+        [ input
+            [ onInput InputLoaderSource ]
+            []
+        , buttonViewWrapper
+            [ class "fetch-source" ]
+            "fetch"
+            FetchSource
         ]
 
 
