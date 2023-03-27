@@ -42,7 +42,6 @@ window.App = function(regionId) {
   })
   app.ports.updateBookmarks.subscribe(message => {
     saveBookmarks(message)
-    app.ports.messageReceiver.send(fetchBookmarks())
   })
   app.ports.exportBookmarks.subscribe(_message => {
     exportBookmarks()

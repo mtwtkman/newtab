@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Browser exposing (element)
+import DnD
 import Html exposing (Attribute, Html, a, button, div, img, input, text)
 import Html.Attributes exposing (class, href, src, value)
 import Html.Events exposing (onClick, onInput)
@@ -31,9 +32,6 @@ main =
 port updateBookmarks : E.Value -> Cmd msg
 
 
-port messageReceiver : (Flags -> msg) -> Sub msg
-
-
 port exportBookmarks : () -> Cmd msg
 
 
@@ -49,6 +47,7 @@ init flags =
     in
     ( { bookmarks = bookmarks
       , viewMode = DisplayBookmarks
+      , draggable = dnd.model
       }
     , Cmd.none
     )
@@ -152,7 +151,13 @@ defaultSizedFaviconUrl =
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
+    , draggable : DnD.Draggable Int Int
     }
+
+
+dnd : DnD.DraggableInit Int Int Msg
+dnd =
+    DnD.init DndMsg OnDrop
 
 
 type EditType
@@ -172,7 +177,6 @@ type ViewMode
 
 type Msg
     = LoadBookmarks
-    | ReceiveLatestBookmarks Flags
     | OpenEdit EditType
     | Edit EditMsg
     | Save
@@ -182,6 +186,8 @@ type Msg
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
     | ExportBookmarks
+    | OnDrop Int Int
+    | DndMsg (DnD.Msg Int Int)
 
 
 type EditMsg
@@ -196,9 +202,6 @@ type EditMsg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.viewMode ) of
-        ( ReceiveLatestBookmarks flags, _ ) ->
-            ( { model | bookmarks = decodeBookmarks flags }, Cmd.none )
-
         ( OpenEdit NewBookmark, DisplayBookmarks ) ->
             ( { model | viewMode = EditBookmark newBookmark NewBookmark }, Cmd.none )
 
@@ -418,7 +421,9 @@ bookmarkListView model =
 
 bookmarkView : Int -> Bookmark -> Html Msg
 bookmarkView i bookmark =
-    div [ class "bookmark-item" ]
+    div
+        [ class "bookmark-item"
+        ]
         [ a
             [ href bookmark.url ]
             [ img [ defaultSizedFaviconUrl bookmark |> src ] []
@@ -468,5 +473,5 @@ exportBookmarksView =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    messageReceiver ReceiveLatestBookmarks
+subscriptions model =
+    dnd.subscriptions model.draggable
