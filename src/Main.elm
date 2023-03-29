@@ -1,9 +1,9 @@
-port module Main exposing (main)
+port module Main exposing (main, move)
 
 import Browser exposing (element)
 import DnD
-import Html exposing (Attribute, Html, a, button, div, img, input, text)
-import Html.Attributes exposing (class, href, src, value)
+import Html exposing (Attribute, Html, a, button, div, i, img, input, text)
+import Html.Attributes exposing (class, href, src, title, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode as D
@@ -151,13 +151,13 @@ defaultSizedFaviconUrl =
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
-    , draggable : DnD.Draggable Int Int
+    , draggable : DnD.Draggable Int ( Int, Bookmark )
     }
 
 
-dnd : DnD.DraggableInit Int Int Msg
+dnd : DnD.DraggableInit Int ( Int, Bookmark ) Msg
 dnd =
-    DnD.init DndMsg OnDrop
+    DnD.init DnDMsg OnDrop
 
 
 type EditType
@@ -186,8 +186,8 @@ type Msg
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
     | ExportBookmarks
-    | OnDrop Int Int
-    | DndMsg (DnD.Msg Int Int)
+    | OnDrop Int ( Int, Bookmark )
+    | DnDMsg (DnD.Msg Int ( Int, Bookmark ))
 
 
 type EditMsg
@@ -289,8 +289,49 @@ update msg model =
         ( ExportBookmarks, _ ) ->
             ( model, exportBookmarks () )
 
+        ( OnDrop to ( from, bookmark ), DisplayBookmarks ) ->
+            ( model, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
+
+
+move : Int -> Int -> List a -> List a
+move from to xs =
+    if from == to then
+        xs
+
+    else if from < to then
+        let
+            former =
+                List.take from xs
+
+            target =
+                List.drop from xs |> List.take 1
+
+            middle =
+                List.drop (from + 1) xs |> List.take (to - from)
+
+            latter =
+                List.drop (to + 1) xs
+        in
+        former ++ middle ++ target ++ latter
+
+    else
+        let
+            former =
+                List.take to xs
+
+            target =
+                List.drop from xs |> List.take 1
+
+            middle =
+                List.drop to xs |> List.take (from - to)
+
+            latter =
+                List.drop (from + 1) xs
+        in
+        former ++ target ++ middle ++ latter
 
 
 updateEditingBookmark : EditMsg -> Bookmark -> Bookmark
@@ -419,22 +460,40 @@ bookmarkListView model =
         (List.indexedMap bookmarkView model.bookmarks)
 
 
+dragged : Int -> Html Msg
+dragged i =
+    div []
+        [ String.fromInt i |> text ]
+
+
 bookmarkView : Int -> Bookmark -> Html Msg
 bookmarkView i bookmark =
+    let
+        node =
+            div
+                [ class "bookmark-item"
+                ]
+                [ a
+                    [ href bookmark.url ]
+                    [ img
+                        [ defaultSizedFaviconUrl bookmark |> src
+                        , title bookmark.title
+                        ]
+                        []
+                    , text bookmark.title
+                    ]
+                , button
+                    [ onClick (OpenEdit (KnownBookmark i bookmark)) ]
+                    [ text "*" ]
+                , button
+                    [ onClick (Remove i) ]
+                    [ text "-" ]
+                ]
+    in
     div
-        [ class "bookmark-item"
-        ]
-        [ a
-            [ href bookmark.url ]
-            [ img [ defaultSizedFaviconUrl bookmark |> src ] []
-            , text bookmark.title
-            ]
-        , button
-            [ onClick (OpenEdit (KnownBookmark i bookmark)) ]
-            [ text "*" ]
-        , button
-            [ onClick (Remove i) ]
-            [ text "-" ]
+        [ class "dnd-item" ]
+        [ droppable i node
+        , dnd.draggable ( i, bookmark ) [] [ node ]
         ]
 
 
@@ -468,10 +527,20 @@ exportBookmarksView =
         ]
 
 
+droppable : Int -> Html Msg -> Html Msg
+droppable index node =
+    dnd.droppable
+        index
+        []
+        [ node ]
+
+
 
 -- SUBSCRIPTION
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    dnd.subscriptions model.draggable
+    Sub.batch
+        [ dnd.subscriptions model.draggable
+        ]
