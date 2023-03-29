@@ -151,11 +151,11 @@ defaultSizedFaviconUrl =
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
-    , draggable : DnD.Draggable Int Int
+    , draggable : DnD.Draggable Int (Int, Bookmark)
     }
 
 
-dnd : DnD.DraggableInit Int Int Msg
+dnd : DnD.DraggableInit Int (Int, Bookmark) Msg
 dnd =
     DnD.init DnDMsg OnDrop
 
@@ -186,8 +186,8 @@ type Msg
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
     | ExportBookmarks
-    | OnDrop Int Int
-    | DnDMsg (DnD.Msg Int Int)
+    | OnDrop Int (Int, Bookmark)
+    | DnDMsg (DnD.Msg Int (Int, Bookmark))
 
 
 type EditMsg
@@ -289,7 +289,7 @@ update msg model =
         ( ExportBookmarks, _ ) ->
             ( model, exportBookmarks () )
 
-        ( OnDrop to from, DisplayBookmarks ) ->
+        ( OnDrop to (from, _), DisplayBookmarks ) ->
             let
                 updatedBookmarks =
                     move from to model.bookmarks
@@ -497,14 +497,15 @@ bookmarkView i bookmark =
     div
         [ class "dnd-item" ]
         [ droppable i <|
-            dnd.draggable i [] [ node ]
+            dnd.draggable (i, bookmark) [] [ node ]
         ]
 
 
-dragged : Int -> Html Msg
-dragged index =
+dragged : (Int, Bookmark) -> Html Msg
+dragged (_, bookmark) =
   div []
-    [ text <| String.fromInt index ]
+    [ text bookmark.title
+    ]
 
 loaderView : Html Msg
 loaderView =

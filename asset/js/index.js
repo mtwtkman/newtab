@@ -1,1 +1,49 @@
-const STORAGE_KEY="newtab-bookmarks";function getValue(t){return localStorage.getItem(t)||null}function getJsonValue(t,e){const o=getValue(t);if(o===null){return e}return JSON.parse(o)}function setJsonValue(t,e){localStorage.setItem(t,JSON.stringify(e))}function fetchBookmarks(){return getJsonValue(STORAGE_KEY,[])}function saveBookmarks(t){return setJsonValue(STORAGE_KEY,t)}function exportBookmarks(){const t=getValue(STORAGE_KEY);const e=new Blob([t],{type:"application/json"});const o=URL.createObjectURL(e);const n=document.createElement("a");n.setAttribute("href",o);n.setAttribute("download","newtab-bookmarks.json");n.style.display="none";n.click();URL.revokeObjectURL(o)}window.App=function(t){const e=document.getElementById(t);const o=Elm.Main.init({node:e,flags:fetchBookmarks()});o.ports.updateBookmarks.subscribe(t=>{saveBookmarks(t)});o.ports.exportBookmarks.subscribe(t=>{exportBookmarks()})};
+const STORAGE_KEY = "newtab-bookmarks"
+
+function getValue(key) {
+  return localStorage.getItem(key) || null
+}
+
+function getJsonValue(key, defaultValue) {
+  const value = getValue(key)
+  if (value === null) { return defaultValue }
+  return JSON.parse(value)
+}
+
+function setJsonValue(key, value) {
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+function fetchBookmarks() {
+  return getJsonValue(STORAGE_KEY, [])
+}
+
+function saveBookmarks(value) {
+  return setJsonValue(STORAGE_KEY, value)
+}
+
+function exportBookmarks() {
+  const data = getValue(STORAGE_KEY)
+  const blob = new Blob([data], { type: "application/json" })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.setAttribute("href", url)
+  link.setAttribute("download", "newtab-bookmarks.json")
+  link.style.display = "none"
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+window.App = function(regionId) {
+  const node = document.getElementById(regionId)
+  const app = Elm.Main.init({
+    node,
+    flags: fetchBookmarks(),
+  })
+  app.ports.updateBookmarks.subscribe(message => {
+    saveBookmarks(message)
+  })
+  app.ports.exportBookmarks.subscribe(_message => {
+    exportBookmarks()
+  })
+}
