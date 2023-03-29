@@ -151,11 +151,11 @@ defaultSizedFaviconUrl =
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
-    , draggable : DnD.Draggable Int ( Int, Bookmark )
+    , draggable : DnD.Draggable Int Int
     }
 
 
-dnd : DnD.DraggableInit Int ( Int, Bookmark ) Msg
+dnd : DnD.DraggableInit Int Int Msg
 dnd =
     DnD.init DnDMsg OnDrop
 
@@ -186,8 +186,8 @@ type Msg
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
     | ExportBookmarks
-    | OnDrop Int ( Int, Bookmark )
-    | DnDMsg (DnD.Msg Int ( Int, Bookmark ))
+    | OnDrop Int Int
+    | DnDMsg (DnD.Msg Int Int)
 
 
 type EditMsg
@@ -289,8 +289,17 @@ update msg model =
         ( ExportBookmarks, _ ) ->
             ( model, exportBookmarks () )
 
-        ( OnDrop to ( from, bookmark ), DisplayBookmarks ) ->
-            ( model, Cmd.none )
+        ( OnDrop to from, DisplayBookmarks ) ->
+            let
+                updatedBookmarks =
+                    move from to model.bookmarks
+            in
+            ( { model | bookmarks = updatedBookmarks }
+            , updateBookmarks (encodeBookmarks updatedBookmarks)
+            )
+
+        ( DnDMsg dndmsg, DisplayBookmarks ) ->
+            ( { model | draggable = DnD.update dndmsg model.draggable }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -357,6 +366,7 @@ view model =
                 [ bookmarkListView model
                 , newBookmarkAddButtonView
                 , loaderSettingButtonView
+                , DnD.dragged model.draggable dragged
                 ]
                     ++ (if List.isEmpty model.bookmarks then
                             []
@@ -457,13 +467,7 @@ bookmarkListView : Model -> Html Msg
 bookmarkListView model =
     div
         [ class "bookmark-list" ]
-        (List.indexedMap bookmarkView model.bookmarks)
-
-
-dragged : Int -> Html Msg
-dragged i =
-    div []
-        [ String.fromInt i |> text ]
+        (List.indexedMap bookmarkView model.bookmarks )
 
 
 bookmarkView : Int -> Bookmark -> Html Msg
@@ -492,10 +496,15 @@ bookmarkView i bookmark =
     in
     div
         [ class "dnd-item" ]
-        [ droppable i node
-        , dnd.draggable ( i, bookmark ) [] [ node ]
+        [ droppable i <|
+            dnd.draggable i [] [ node ]
         ]
 
+
+dragged : Int -> Html Msg
+dragged index =
+  div []
+    [ text <| String.fromInt index ]
 
 loaderView : Html Msg
 loaderView =
@@ -531,7 +540,8 @@ droppable : Int -> Html Msg -> Html Msg
 droppable index node =
     dnd.droppable
         index
-        []
+        [ class "bookmark-droppable-zone"
+        ]
         [ node ]
 
 
