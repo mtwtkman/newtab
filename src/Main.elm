@@ -2,13 +2,18 @@ port module Main exposing (main, move)
 
 import Browser exposing (element)
 import DnD
-import Html exposing (Attribute, Html, a, button, div, i, img, input, text)
-import Html.Attributes exposing (class, href, src, title, value)
-import Html.Events exposing (onClick, onInput)
+import Entity exposing (Bookmark, Title, Url, newBookmark)
+import Html exposing (Html, button, div, i, text)
+import Html.Attributes exposing (class, title)
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode as D
 import Json.Encode as E
-import Url.Builder as UB exposing (crossOrigin)
+import View.BookmarkEditor exposing (bookmarkEditorView)
+import View.BookmarkList exposing (bookmarkListView, dragged)
+import View.Export exposing (exportBookmarksView)
+import View.Loader exposing (loaderSettingButtonView, loaderView)
+import Viewmode exposing (EditType(..), ViewMode(..))
 
 
 
@@ -48,6 +53,7 @@ init flags =
     ( { bookmarks = bookmarks
       , viewMode = DisplayBookmarks
       , draggable = dnd.model
+      , draggingBookmarks = []
       }
     , Cmd.none
     )
@@ -101,74 +107,21 @@ encodeBookmarks bookmarks =
 -- MODEL
 
 
-type alias Url =
-    String
-
-
-type alias Title =
-    String
-
-
-type alias Bookmark =
-    { url : Url
-    , title : Title
-    }
-
-
-newBookmark : Bookmark
-newBookmark =
-    { url = ""
-    , title = ""
-    }
-
-
 type alias Flags =
     D.Value
-
-
-flip : (a -> b -> c) -> b -> a -> c
-flip f b a =
-    f a b
-
-
-faviconUrl : Bookmark -> Int -> String
-faviconUrl bookmark size =
-    crossOrigin "https://t2.gstatic.com"
-        [ "faviconV2" ]
-        [ UB.string "client" "SOCIAL"
-        , UB.string "type" "FAVICON"
-        , UB.string "fallback_opts" "TYPE,SIZE,URL"
-        , UB.string "url" bookmark.url
-        , UB.int "size" size
-        ]
-
-
-defaultSizedFaviconUrl : Bookmark -> String
-defaultSizedFaviconUrl =
-    flip faviconUrl 32
 
 
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
-    , draggable : DnD.Draggable Int (Int, Bookmark)
+    , draggable : DnD.Draggable Int ( Int, Bookmark )
+    , draggingBookmarks : List Bookmark
     }
 
 
-dnd : DnD.DraggableInit Int (Int, Bookmark) Msg
+dnd : DnD.DraggableInit Int ( Int, Bookmark ) Msg
 dnd =
     DnD.init DnDMsg OnDrop
-
-
-type EditType
-    = NewBookmark
-    | KnownBookmark Int Bookmark
-
-
-type ViewMode
-    = DisplayBookmarks
-    | EditBookmark Bookmark EditType
-    | Loader String
 
 
 
@@ -186,8 +139,8 @@ type Msg
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
     | ExportBookmarks
-    | OnDrop Int (Int, Bookmark)
-    | DnDMsg (DnD.Msg Int (Int, Bookmark))
+    | OnDrop Int ( Int, Bookmark )
+    | DnDMsg (DnD.Msg Int ( Int, Bookmark ))
 
 
 type EditMsg
@@ -289,7 +242,7 @@ update msg model =
         ( ExportBookmarks, _ ) ->
             ( model, exportBookmarks () )
 
-        ( OnDrop to (from, _), DisplayBookmarks ) ->
+        ( OnDrop to ( from, _ ), DisplayBookmarks ) ->
             let
                 updatedBookmarks =
                     move from to model.bookmarks
@@ -363,28 +316,40 @@ view model =
         [ class "toplevel" ]
         (case model.viewMode of
             DisplayBookmarks ->
-                [ bookmarkListView model
+                [ bookmarkListView dnd OpenEdit Remove model.bookmarks
                 , newBookmarkAddButtonView
-                , loaderSettingButtonView
+                , loaderSettingButtonView LoadBookmarks
                 , DnD.dragged model.draggable dragged
                 ]
                     ++ (if List.isEmpty model.bookmarks then
                             []
 
                         else
-                            [ exportBookmarksView ]
+                            [ exportBookmarksView ExportBookmarks ]
                        )
 
             EditBookmark bookmark NewBookmark ->
-                [ bookmarkEditorView bookmark
+                [ bookmarkEditorView
+                    Edit
+                    InputTitle
+                    InputUrl
+                    Save
+                    Cancel
+                    bookmark
                 ]
 
             EditBookmark bookmark (KnownBookmark _ _) ->
-                [ bookmarkEditorView bookmark
+                [ bookmarkEditorView
+                    Edit
+                    InputTitle
+                    InputUrl
+                    Save
+                    Cancel
+                    bookmark
                 ]
 
             Loader _ ->
-                [ loaderView
+                [ loaderView InputLoaderSource FetchSource
                 ]
         )
 
@@ -396,154 +361,6 @@ newBookmarkAddButtonView =
         , class "new-bookmark-add-button"
         ]
         [ text "+" ]
-
-
-buttonViewWrapper : List (Attribute msg) -> String -> msg -> Html msg
-buttonViewWrapper attrs label msg =
-    div
-        attrs
-        [ button
-            [ onClick msg ]
-            [ text label ]
-        ]
-
-
-loaderSettingButtonView : Html Msg
-loaderSettingButtonView =
-    buttonViewWrapper
-        [ class "loader-setting" ]
-        "load"
-        LoadBookmarks
-
-
-inputViewWrapper : String -> String -> (String -> EditMsg) -> Html EditMsg
-inputViewWrapper label inputValue handler =
-    div
-        [ class ("input-" ++ label) ]
-        [ input
-            [ value inputValue
-            , onInput handler
-            ]
-            []
-        ]
-
-
-inputFormView : Bookmark -> Html Msg
-inputFormView bookmark =
-    div
-        [ class "input-form" ]
-        [ Html.map Edit (inputViewWrapper "title" bookmark.title InputTitle)
-        , Html.map Edit (inputViewWrapper "url" bookmark.url InputUrl)
-        ]
-
-
-saveButtonView : Html Msg
-saveButtonView =
-    buttonViewWrapper
-        [ class "save" ]
-        "save"
-        Save
-
-
-cancelButtonView : Html Msg
-cancelButtonView =
-    buttonViewWrapper
-        [ class "cancel" ]
-        "cancel"
-        Cancel
-
-
-bookmarkEditorView : Bookmark -> Html Msg
-bookmarkEditorView bookmark =
-    div
-        [ class "bookmark-editor" ]
-        [ inputFormView bookmark
-        , saveButtonView
-        , cancelButtonView
-        ]
-
-
-bookmarkListView : Model -> Html Msg
-bookmarkListView model =
-    div
-        [ class "bookmark-list" ]
-        (List.indexedMap bookmarkView model.bookmarks )
-
-
-bookmarkView : Int -> Bookmark -> Html Msg
-bookmarkView i bookmark =
-    let
-        node =
-            div
-                [ class "bookmark-item"
-                ]
-                [ a
-                    [ href bookmark.url ]
-                    [ img
-                        [ defaultSizedFaviconUrl bookmark |> src
-                        , title bookmark.title
-                        ]
-                        []
-                    , text bookmark.title
-                    ]
-                , button
-                    [ onClick (OpenEdit (KnownBookmark i bookmark)) ]
-                    [ text "*" ]
-                , button
-                    [ onClick (Remove i) ]
-                    [ text "-" ]
-                ]
-    in
-    div
-        [ class "dnd-item" ]
-        [ droppable i <|
-            dnd.draggable (i, bookmark) [] [ node ]
-        ]
-
-
-dragged : (Int, Bookmark) -> Html Msg
-dragged (_, bookmark) =
-  div []
-    [ text bookmark.title
-    ]
-
-loaderView : Html Msg
-loaderView =
-    div
-        [ class "loader-wrapper" ]
-        [ input
-            [ onInput InputLoaderSource ]
-            []
-        , buttonViewWrapper
-            [ class "fetch-source" ]
-            "fetch"
-            FetchSource
-        ]
-
-
-exportBookmarksButton : Html Msg
-exportBookmarksButton =
-    buttonViewWrapper
-        [ class "export-bookmarks-button" ]
-        "export"
-        ExportBookmarks
-
-
-exportBookmarksView : Html Msg
-exportBookmarksView =
-    div
-        [ class "export-bookmarks-wrapper" ]
-        [ exportBookmarksButton
-        ]
-
-
-droppable : Int -> Html Msg -> Html Msg
-droppable index node =
-    dnd.droppable
-        index
-        [ class "bookmark-droppable-zone"
-        ]
-        [ node ]
 
 
 
