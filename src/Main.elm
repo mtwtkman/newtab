@@ -1,4 +1,4 @@
-port module Main exposing (main, move)
+port module Main exposing (main)
 
 import Browser exposing (element)
 import DnD
@@ -14,6 +14,7 @@ import View.BookmarkList exposing (bookmarkListView, dragged)
 import View.Export exposing (exportBookmarksView)
 import View.Loader exposing (loaderSettingButtonView, loaderView)
 import Viewmode exposing (EditType(..), ViewMode(..))
+import Func exposing (move)
 
 
 
@@ -54,6 +55,7 @@ init flags =
       , viewMode = DisplayBookmarks
       , draggable = dnd.model
       , draggingBookmarks = []
+      , rowLength = 4
       }
     , Cmd.none
     )
@@ -116,6 +118,7 @@ type alias Model =
     , viewMode : ViewMode
     , draggable : DnD.Draggable Int ( Int, Bookmark )
     , draggingBookmarks : List Bookmark
+    , rowLength : Int
     }
 
 
@@ -258,43 +261,6 @@ update msg model =
             ( model, Cmd.none )
 
 
-move : Int -> Int -> List a -> List a
-move from to xs =
-    if from == to then
-        xs
-
-    else if from < to then
-        let
-            former =
-                List.take from xs
-
-            target =
-                List.drop from xs |> List.take 1
-
-            middle =
-                List.drop (from + 1) xs |> List.take (to - from)
-
-            latter =
-                List.drop (to + 1) xs
-        in
-        former ++ middle ++ target ++ latter
-
-    else
-        let
-            former =
-                List.take to xs
-
-            target =
-                List.drop from xs |> List.take 1
-
-            middle =
-                List.drop to xs |> List.take (from - to)
-
-            latter =
-                List.drop (from + 1) xs
-        in
-        former ++ target ++ middle ++ latter
-
 
 updateEditingBookmark : EditMsg -> Bookmark -> Bookmark
 updateEditingBookmark msg bookmark =
@@ -316,7 +282,7 @@ view model =
         [ class "toplevel" ]
         (case model.viewMode of
             DisplayBookmarks ->
-                [ bookmarkListView dnd OpenEdit Remove model.bookmarks
+                [ bookmarkListView model.rowLength dnd OpenEdit Remove model.bookmarks
                 , newBookmarkAddButtonView
                 , loaderSettingButtonView LoadBookmarks
                 , DnD.dragged model.draggable dragged

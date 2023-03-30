@@ -10,10 +10,11 @@ import Url.Builder as UB exposing (crossOrigin)
 import Viewmode exposing (EditType(..))
 
 
-bookmarkListView : DnD.DraggableInit Int ( Int, Bookmark ) msg -> (EditType -> msg) -> (Int -> msg) -> List Bookmark -> Html msg
-bookmarkListView dnd openHandler removeHandler bookmarks =
+bookmarkListView : Int -> DnD.DraggableInit Int ( Int, Bookmark ) msg -> (EditType -> msg) -> (Int -> msg) -> List Bookmark -> Html msg
+bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
     div
-        [ class "bookmark-list" ]
+        [ class "bookmark-list"
+        ]
         (List.indexedMap
             (\i b ->
                 bookmarkView
@@ -87,4 +88,4 @@ droppable dnd index =
         index
         [ class "bookmark-droppable-zone"
         ]
-        [ text <| String.fromInt index ]
+        []
