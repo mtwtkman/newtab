@@ -13,7 +13,8 @@ spec =
             [ 1, 2, 3, 4, 5 ]
 
         empty : List Int
-        empty = []
+        empty =
+            []
 
         testFunc : Int -> List Int -> List (List Int) -> (a -> Expect.Expectation)
         testFunc size data expected =
@@ -22,6 +23,6 @@ spec =
     in
     describe "chunk"
         [ test "divides by odd size" <| testFunc 3 filled [ [ 1, 2, 3 ], [ 4, 5 ] ]
-        , test "divides by just size" <| testFunc (List.length filled) filled [filled]
+        , test "divides by just size" <| testFunc (List.length filled) filled [ filled ]
         , test "retuns empty against empty list" <| testFunc 3 empty []
         ]

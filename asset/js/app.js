@@ -11107,7 +11107,7 @@ var $author$project$Main$dnd = A2($ir4y$elm_dnd$DnD$init, $author$project$Main$D
 var $author$project$Main$init = function (flags) {
 	var bookmarks = $author$project$Main$decodeBookmarks(flags);
 	return _Utils_Tuple2(
-		{bookmarks: bookmarks, draggable: $author$project$Main$dnd.model, draggingBookmarks: _List_Nil, rowLength: 4, viewMode: $author$project$Viewmode$DisplayBookmarks},
+		{bookmarks: bookmarks, draggable: $author$project$Main$dnd.model, rowLength: 4, shed: _List_Nil, viewMode: $author$project$Viewmode$DisplayBookmarks},
 		$elm$core$Platform$Cmd$none);
 };
 var $author$project$Main$subscriptions = function (model) {
@@ -11410,6 +11410,25 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
+var $elm$core$Maybe$map = F2(
+	function (f, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return $elm$core$Maybe$Just(
+				f(value));
+		} else {
+			return $elm$core$Maybe$Nothing;
+		}
+	});
+var $ir4y$elm_dnd$DnD$getDragMeta = function (_v0) {
+	var d = _v0.a;
+	return A2(
+		$elm$core$Maybe$map,
+		function ($) {
+			return $.dragMeta;
+		},
+		d);
+};
 var $elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
 		takeReverse:
@@ -11536,60 +11555,19 @@ var $elm$core$List$take = F2(
 	function (n, list) {
 		return A3($elm$core$List$takeFast, 0, n, list);
 	});
-var $author$project$Func$move = F3(
-	function (from, to, xs) {
-		if (_Utils_eq(from, to)) {
-			return xs;
-		} else {
-			if (_Utils_cmp(from, to) < 0) {
-				var target = A2(
-					$elm$core$List$take,
-					1,
-					A2($elm$core$List$drop, from, xs));
-				var middle = A2(
-					$elm$core$List$take,
-					to - from,
-					A2($elm$core$List$drop, from + 1, xs));
-				var latter = A2($elm$core$List$drop, to + 1, xs);
-				var former = A2($elm$core$List$take, from, xs);
-				return _Utils_ap(
-					former,
-					_Utils_ap(
-						middle,
-						_Utils_ap(target, latter)));
-			} else {
-				var target = A2(
-					$elm$core$List$take,
-					1,
-					A2($elm$core$List$drop, from, xs));
-				var middle = A2(
-					$elm$core$List$take,
-					from - to,
-					A2($elm$core$List$drop, to, xs));
-				var latter = A2($elm$core$List$drop, from + 1, xs);
-				var former = A2($elm$core$List$take, to, xs);
-				return _Utils_ap(
-					former,
-					_Utils_ap(
-						target,
-						_Utils_ap(middle, latter)));
-			}
-		}
+var $author$project$Func$inject = F3(
+	function (xs, pos, x) {
+		return _Utils_ap(
+			A2($elm$core$List$take, pos, xs),
+			A2(
+				$elm$core$List$cons,
+				x,
+				A2($elm$core$List$drop, pos, xs)));
 	});
 var $author$project$Entity$newBookmark = {title: '', url: ''};
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
 		return _Utils_Tuple2(a, b);
-	});
-var $elm$core$Maybe$map = F2(
-	function (f, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return $elm$core$Maybe$Just(
-				f(value));
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
 	});
 var $ir4y$elm_dnd$DnD$update = F2(
 	function (msg, _v0) {
@@ -11846,15 +11824,14 @@ var $author$project$Main$update = F2(
 				case 'OnDrop':
 					if (_v0.b.$ === 'DisplayBookmarks') {
 						var _v19 = _v0.a;
-						var to = _v19.a;
-						var _v20 = _v19.b;
-						var from = _v20.a;
-						var _v21 = _v0.b;
-						var updatedBookmarks = A3($author$project$Func$move, from, to, model.bookmarks);
+						var injectPosition = _v19.a;
+						var target = _v19.b;
+						var _v20 = _v0.b;
+						var updatedBookmarks = A3($author$project$Func$inject, model.shed, injectPosition, target);
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{bookmarks: updatedBookmarks}),
+								{bookmarks: updatedBookmarks, shed: _List_Nil}),
 							$author$project$Main$updateBookmarks(
 								$author$project$Main$encodeBookmarks(updatedBookmarks)));
 					} else {
@@ -11863,12 +11840,25 @@ var $author$project$Main$update = F2(
 				default:
 					if (_v0.b.$ === 'DisplayBookmarks') {
 						var dndmsg = _v0.a.a;
-						var _v22 = _v0.b;
+						var _v21 = _v0.b;
+						var shed = A2(
+							$elm$core$Maybe$withDefault,
+							_List_Nil,
+							A2(
+								$elm$core$Maybe$map,
+								function (x) {
+									return A2(
+										$elm$core$List$filter,
+										$elm$core$Basics$neq(x),
+										model.bookmarks);
+								},
+								$ir4y$elm_dnd$DnD$getDragMeta(model.draggable)));
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
 								{
-									draggable: A2($ir4y$elm_dnd$DnD$update, dndmsg, model.draggable)
+									draggable: A2($ir4y$elm_dnd$DnD$update, dndmsg, model.draggable),
+									shed: shed
 								}),
 							$elm$core$Platform$Cmd$none);
 					} else {
@@ -12085,7 +12075,7 @@ var $author$project$View$BookmarkList$bookmarkView = F5(
 					A2($author$project$View$BookmarkList$droppable, dnd, i),
 					A3(
 					dnd.draggable,
-					_Utils_Tuple2(i, bookmark),
+					bookmark,
 					_List_Nil,
 					_List_fromArray(
 						[
@@ -12197,8 +12187,7 @@ var $ir4y$elm_dnd$DnD$dragged = F2(
 				},
 				model));
 	});
-var $author$project$View$BookmarkList$dragged = function (_v0) {
-	var bookmark = _v0.b;
+var $author$project$View$BookmarkList$dragged = function (bookmark) {
 	return A2(
 		$elm$html$Html$div,
 		_List_Nil,
@@ -12327,4 +12316,4 @@ var $author$project$Main$view = function (model) {
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Entity.Bookmark":{"args":[],"type":"{ url : Entity.Url, title : Entity.Title }"},"Entity.Title":{"args":[],"type":"String.String"},"Entity.Url":{"args":[],"type":"String.String"},"DnD.MousePosition":{"args":[],"type":"{ x : Basics.Int, y : Basics.Int }"}},"unions":{"Main.Msg":{"args":[],"tags":{"LoadBookmarks":[],"OpenEdit":["Viewmode.EditType"],"Edit":["Main.EditMsg"],"Save":[],"Cancel":[],"Remove":["Basics.Int"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Entity.Bookmark)"],"InputLoaderSource":["String.String"],"ExportBookmarks":[],"OnDrop":["Basics.Int","( Basics.Int, Entity.Bookmark )"],"DnDMsg":["DnD.Msg Basics.Int ( Basics.Int, Entity.Bookmark )"]}},"Main.EditMsg":{"args":[],"tags":{"InputUrl":["Entity.Url"],"InputTitle":["Entity.Title"]}},"Viewmode.EditType":{"args":[],"tags":{"NewBookmark":[],"KnownBookmark":["Basics.Int","Entity.Bookmark"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"DnD.Msg":{"args":["dropMeta","dragMeta"],"tags":{"DragStart":["dragMeta","DnD.MousePosition"],"Dragging":["DnD.MousePosition"],"DragEnd":["DnD.MousePosition"],"EnterDroppable":["dropMeta"],"LeaveDroppable":[]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Entity.Bookmark":{"args":[],"type":"{ url : Entity.Url, title : Entity.Title }"},"Entity.Title":{"args":[],"type":"String.String"},"Entity.Url":{"args":[],"type":"String.String"},"DnD.MousePosition":{"args":[],"type":"{ x : Basics.Int, y : Basics.Int }"}},"unions":{"Main.Msg":{"args":[],"tags":{"LoadBookmarks":[],"OpenEdit":["Viewmode.EditType"],"Edit":["Main.EditMsg"],"Save":[],"Cancel":[],"Remove":["Basics.Int"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Entity.Bookmark)"],"InputLoaderSource":["String.String"],"ExportBookmarks":[],"OnDrop":["Basics.Int","Entity.Bookmark"],"DnDMsg":["DnD.Msg Basics.Int Entity.Bookmark"]}},"Main.EditMsg":{"args":[],"tags":{"InputUrl":["Entity.Url"],"InputTitle":["Entity.Title"]}},"Viewmode.EditType":{"args":[],"tags":{"NewBookmark":[],"KnownBookmark":["Basics.Int","Entity.Bookmark"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"DnD.Msg":{"args":["dropMeta","dragMeta"],"tags":{"DragStart":["dragMeta","DnD.MousePosition"],"Dragging":["DnD.MousePosition"],"DragEnd":["DnD.MousePosition"],"EnterDroppable":["dropMeta"],"LeaveDroppable":[]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));

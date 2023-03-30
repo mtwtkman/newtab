@@ -3,6 +3,7 @@ port module Main exposing (main)
 import Browser exposing (element)
 import DnD
 import Entity exposing (Bookmark, Title, Url, newBookmark)
+import Func exposing (inject)
 import Html exposing (Html, button, div, i, text)
 import Html.Attributes exposing (class, title)
 import Html.Events exposing (onClick)
@@ -14,7 +15,6 @@ import View.BookmarkList exposing (bookmarkListView, dragged)
 import View.Export exposing (exportBookmarksView)
 import View.Loader exposing (loaderSettingButtonView, loaderView)
 import Viewmode exposing (EditType(..), ViewMode(..))
-import Func exposing (move)
 
 
 
@@ -143,7 +143,7 @@ type Msg
     | InputLoaderSource String
     | ExportBookmarks
     | OnDrop Int Bookmark
-    | DnDMsg (DnD.Msg Int Bookmark )
+    | DnDMsg (DnD.Msg Int Bookmark)
 
 
 type EditMsg
@@ -245,21 +245,34 @@ update msg model =
         ( ExportBookmarks, _ ) ->
             ( model, exportBookmarks () )
 
-        ( OnDrop to ( from, _ ), DisplayBookmarks ) ->
+        ( OnDrop injectPosition target, DisplayBookmarks ) ->
             let
                 updatedBookmarks =
-                    move from to model.bookmarks
+                    inject model.shed injectPosition target
             in
-            ( { model | bookmarks = updatedBookmarks }
+            ( { model
+                | bookmarks = updatedBookmarks
+                , shed = []
+              }
             , updateBookmarks (encodeBookmarks updatedBookmarks)
             )
 
         ( DnDMsg dndmsg, DisplayBookmarks ) ->
-            ( { model | draggable = DnD.update dndmsg model.draggable }, Cmd.none )
+            let
+                shed =
+                    DnD.getDragMeta model.draggable
+                        |> Maybe.map (\x -> List.filter ((/=) x) model.bookmarks)
+                        |> Maybe.withDefault []
+            in
+            ( { model
+                | draggable = DnD.update dndmsg model.draggable
+                , shed = shed
+              }
+            , Cmd.none
+            )
 
         _ ->
             ( model, Cmd.none )
-
 
 
 updateEditingBookmark : EditMsg -> Bookmark -> Bookmark

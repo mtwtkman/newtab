@@ -10,7 +10,7 @@ import Url.Builder as UB exposing (crossOrigin)
 import Viewmode exposing (EditType(..))
 
 
-bookmarkListView : Int -> DnD.DraggableInit Int ( Int, Bookmark ) msg -> (EditType -> msg) -> (Int -> msg) -> List Bookmark -> Html msg
+bookmarkListView : Int -> DnD.DraggableInit Int Bookmark msg -> (EditType -> msg) -> (Int -> msg) -> List Bookmark -> Html msg
 bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
     div
         [ class "bookmark-list"
@@ -28,12 +28,12 @@ bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
         )
 
 
-bookmarkView : DnD.DraggableInit Int ( Int, Bookmark ) msg -> (EditType -> msg) -> (Int -> msg) -> Int -> Bookmark -> Html msg
+bookmarkView : DnD.DraggableInit Int Bookmark msg -> (EditType -> msg) -> (Int -> msg) -> Int -> Bookmark -> Html msg
 bookmarkView dnd openHandler removeHandler i bookmark =
     div
         [ class "dnd-item" ]
         [ droppable dnd i
-        , dnd.draggable ( i, bookmark )
+        , dnd.draggable bookmark
             []
             [ div
                 [ class "bookmark-item"
@@ -75,14 +75,14 @@ defaultSizedFaviconUrl =
     flip faviconUrl 32
 
 
-dragged : ( Int, Bookmark ) -> Html msg
-dragged ( _, bookmark ) =
+dragged : Bookmark -> Html msg
+dragged bookmark =
     div []
         [ text bookmark.title
         ]
 
 
-droppable : DnD.DraggableInit Int ( Int, Bookmark ) msg -> Int -> Html msg
+droppable : DnD.DraggableInit Int Bookmark msg -> Int -> Html msg
 droppable dnd index =
     dnd.droppable
         index
