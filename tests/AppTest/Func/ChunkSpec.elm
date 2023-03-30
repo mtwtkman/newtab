@@ -23,5 +23,5 @@ spec =
     describe "chunk"
         [ test "divides by odd size" <| testFunc 3 filled [ [ 1, 2, 3 ], [ 4, 5 ] ]
         , test "divides by just size" <| testFunc (List.length filled) filled [filled]
-        , test "retuns empty against empty list" <| testFunc 3 [] []
+        , test "retuns empty against empty list" <| testFunc 3 empty []
         ]

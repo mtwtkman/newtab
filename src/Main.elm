@@ -54,7 +54,7 @@ init flags =
     ( { bookmarks = bookmarks
       , viewMode = DisplayBookmarks
       , draggable = dnd.model
-      , draggingBookmarks = []
+      , shed = []
       , rowLength = 4
       }
     , Cmd.none
@@ -116,13 +116,13 @@ type alias Flags =
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
-    , draggable : DnD.Draggable Int ( Int, Bookmark )
-    , draggingBookmarks : List Bookmark
+    , draggable : DnD.Draggable Int Bookmark
+    , shed : List Bookmark
     , rowLength : Int
     }
 
 
-dnd : DnD.DraggableInit Int ( Int, Bookmark ) Msg
+dnd : DnD.DraggableInit Int Bookmark Msg
 dnd =
     DnD.init DnDMsg OnDrop
 
@@ -142,8 +142,8 @@ type Msg
     | GotSource (Result Http.Error (List Bookmark))
     | InputLoaderSource String
     | ExportBookmarks
-    | OnDrop Int ( Int, Bookmark )
-    | DnDMsg (DnD.Msg Int ( Int, Bookmark ))
+    | OnDrop Int Bookmark
+    | DnDMsg (DnD.Msg Int Bookmark )
 
 
 type EditMsg

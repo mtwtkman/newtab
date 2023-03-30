@@ -1,4 +1,4 @@
-module Func exposing (flip, move, chunk)
+module Func exposing (chunk, flip, inject, move)
 
 
 flip : (a -> b -> c) -> b -> a -> c
@@ -42,6 +42,11 @@ move from to xs =
                 List.drop (from + 1) xs
         in
         former ++ target ++ middle ++ latter
+
+
+inject : List a -> Int -> a -> List a
+inject xs pos x =
+    List.take pos xs ++ x :: List.drop pos xs
 
 
 chunk : List a -> Int -> List (List a)
