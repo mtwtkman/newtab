@@ -2,7 +2,7 @@ module View.BookmarkList exposing (bookmarkListView, dragged)
 
 import DnD
 import Entity exposing (Bookmark)
-import Func exposing (flip)
+import Func exposing (chunk, flip)
 import Html exposing (Html, a, button, div, img, text)
 import Html.Attributes exposing (class, href, src, title)
 import Html.Events exposing (onClick)
@@ -12,26 +12,40 @@ import Viewmode exposing (EditType(..))
 
 bookmarkListView : Int -> DnD.DraggableInit Int Bookmark msg -> (EditType -> msg) -> (Int -> msg) -> List Bookmark -> Html msg
 bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
+    let
+        chunked =
+            List.indexedMap Tuple.pair bookmarks |> flip chunk rowLength
+    in
     div
         [ class "bookmark-list"
         ]
-        (List.indexedMap
-            (\i b ->
-                bookmarkView
-                    dnd
-                    openHandler
-                    removeHandler
-                    i
-                    b
+        (List.map
+            (\xs ->
+                div
+                    [ class "row"
+                    ]
+                    (List.map
+                        (\( i, b ) ->
+                            bookmarkView
+                                dnd
+                                openHandler
+                                removeHandler
+                                i
+                                b
+                        )
+                        xs
+                    )
             )
-            bookmarks
+            chunked
         )
 
 
 bookmarkView : DnD.DraggableInit Int Bookmark msg -> (EditType -> msg) -> (Int -> msg) -> Int -> Bookmark -> Html msg
 bookmarkView dnd openHandler removeHandler i bookmark =
     div
-        [ class "dnd-item" ]
+        [ class "dnd-item"
+        , class "column"
+        ]
         [ droppable dnd i
         , dnd.draggable bookmark
             []
