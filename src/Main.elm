@@ -328,7 +328,7 @@ view model =
                 ]
 
             Loader _ ->
-                [ loaderView InputLoaderSource FetchSource
+                [ loaderView InputLoaderSource FetchSource Cancel
                 ]
         )
 

@@ -4,6 +4,7 @@ import Entity exposing (Bookmark, Title, Url)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import View.Widget exposing (buttonViewWrapper, inputViewWrapper)
+import View.CancelButton exposing (cancelButtonView)
 
 
 type alias ToMsg subMsg msg =
@@ -44,10 +45,3 @@ saveButtonView msg =
         "save"
         msg
 
-
-cancelButtonView : cancelMsg -> Html cancelMsg
-cancelButtonView msg =
-    buttonViewWrapper
-        [ class "cancel" ]
-        "cancel"
-        msg
