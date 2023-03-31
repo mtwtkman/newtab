@@ -10,8 +10,15 @@ import Url.Builder as UB exposing (crossOrigin)
 import Viewmode exposing (EditType(..))
 
 
-bookmarkListView : Int -> DnD.DraggableInit Int Bookmark msg -> (EditType -> msg) -> (Int -> msg) -> List Bookmark -> Html msg
-bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
+bookmarkListView :
+    Int
+    -> DnD.DraggableInit Int Bookmark msg
+    -> DnD.Draggable Int Bookmark
+    -> (EditType -> msg)
+    -> (Int -> msg)
+    -> List Bookmark
+    -> Html msg
+bookmarkListView rowLength dnd dndModel openHandler removeHandler bookmarks =
     let
         chunked =
             List.indexedMap Tuple.pair bookmarks |> flip chunk rowLength
@@ -22,12 +29,12 @@ bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
         (List.map
             (\xs ->
                 div
-                    [ class "row"
-                    ]
+                    []
                     (List.map
                         (\( i, b ) ->
                             bookmarkView
                                 dnd
+                                dndModel
                                 openHandler
                                 removeHandler
                                 i
@@ -40,13 +47,19 @@ bookmarkListView rowLength dnd openHandler removeHandler bookmarks =
         )
 
 
-bookmarkView : DnD.DraggableInit Int Bookmark msg -> (EditType -> msg) -> (Int -> msg) -> Int -> Bookmark -> Html msg
-bookmarkView dnd openHandler removeHandler i bookmark =
+bookmarkView :
+    DnD.DraggableInit Int Bookmark msg
+    -> DnD.Draggable Int Bookmark
+    -> (EditType -> msg)
+    -> (Int -> msg)
+    -> Int
+    -> Bookmark
+    -> Html msg
+bookmarkView dnd dndModel openHandler removeHandler i bookmark =
     div
         [ class "dnd-item"
-        , class "column"
         ]
-        [ droppable dnd i
+        [ droppable dnd dndModel i
         , dnd.draggable bookmark
             []
             [ div
@@ -96,10 +109,26 @@ dragged bookmark =
         ]
 
 
-droppable : DnD.DraggableInit Int Bookmark msg -> Int -> Html msg
-droppable dnd index =
+droppable :
+    DnD.DraggableInit Int Bookmark msg
+    -> DnD.Draggable Int Bookmark
+    -> Int
+    -> Html msg
+droppable dnd dndModel index =
     dnd.droppable
         index
         [ class "bookmark-droppable-zone"
+        , if
+            case DnD.getDropMeta dndModel of
+                Just to ->
+                    to == index
+
+                _ ->
+                    False
+          then
+            class "drag-over"
+
+          else
+            class "non-touched"
         ]
         []

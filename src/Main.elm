@@ -295,7 +295,13 @@ view model =
         [ class "toplevel" ]
         (case model.viewMode of
             DisplayBookmarks ->
-                [ bookmarkListView model.rowLength dnd OpenEdit Remove model.bookmarks
+                [ bookmarkListView
+                    model.rowLength
+                    dnd
+                    model.draggable
+                    OpenEdit
+                    Remove
+                    model.bookmarks
                 , newBookmarkAddButtonView
                 , loaderSettingButtonView LoadBookmarks
                 , DnD.dragged model.draggable dragged
