@@ -2,12 +2,12 @@ module View.Export exposing (exportBookmarksView)
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import View.Widget exposing (buttonViewWrapper)
+import View.Widget exposing (successButtonViewWrapper)
 
 
 exportBookmarksButton : msg -> Html msg
 exportBookmarksButton exportMsg =
-    buttonViewWrapper
+    successButtonViewWrapper
         [ class "export-bookmarks-button" ]
         "export"
         exportMsg

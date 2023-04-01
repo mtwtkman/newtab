@@ -29,7 +29,8 @@ bookmarkListView rowLength dnd dndModel openHandler removeHandler bookmarks =
         (List.map
             (\xs ->
                 div
-                    []
+                    [ class "columns"
+                    ]
                     (List.map
                         (\( i, b ) ->
                             bookmarkView
@@ -58,28 +59,34 @@ bookmarkView :
 bookmarkView dnd dndModel openHandler removeHandler i bookmark =
     div
         [ class "dnd-item"
+        , class "column"
         ]
-        [ droppable dnd dndModel i
-        , dnd.draggable bookmark
-            []
-            [ div
-                [ class "bookmark-item"
+        [ div
+            [ class "columns"
+            ]
+            [ droppable dnd dndModel i
+            , dnd.draggable bookmark
+                [ class "column"
                 ]
-                [ a
-                    [ href bookmark.url ]
-                    [ img
-                        [ defaultSizedFaviconUrl bookmark |> src
-                        , title bookmark.title
-                        ]
-                        []
-                    , text bookmark.title
+                [ div
+                    [ class "bookmark-item"
                     ]
-                , button
-                    [ onClick (openHandler (KnownBookmark i bookmark)) ]
-                    [ text "*" ]
-                , button
-                    [ onClick (removeHandler i) ]
-                    [ text "-" ]
+                    [ a
+                        [ href bookmark.url ]
+                        [ img
+                            [ defaultSizedFaviconUrl bookmark |> src
+                            , title bookmark.title
+                            ]
+                            []
+                        , text bookmark.title
+                        ]
+                    , button
+                        [ onClick (openHandler (KnownBookmark i bookmark)) ]
+                        [ text "*" ]
+                    , button
+                        [ onClick (removeHandler i) ]
+                        [ text "-" ]
+                    ]
                 ]
             ]
         ]
@@ -118,6 +125,8 @@ droppable dnd dndModel index =
     dnd.droppable
         index
         [ class "bookmark-droppable-zone"
+        , class "column"
+        , class "is-1"
         , if
             case DnD.getDropMeta dndModel of
                 Just to ->

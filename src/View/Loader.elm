@@ -1,28 +1,25 @@
 module View.Loader exposing (loaderSettingButtonView, loaderView)
 
-import Html exposing (Html, div, input)
+import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import Html.Events exposing (onInput)
 import View.CancelButton exposing (cancelButtonView)
-import View.Widget exposing (buttonViewWrapper)
+import View.Widget exposing (infoButtonViewWrapper, inputViewWrapper)
 
 
 loaderSettingButtonView : msg -> Html msg
 loaderSettingButtonView loadMsg =
-    buttonViewWrapper
+    infoButtonViewWrapper
         [ class "loader-setting" ]
         "load"
         loadMsg
 
 
-loaderView : (String -> msg) -> msg -> msg -> Html msg
-loaderView inputHandler fetchMsg cancelMsg =
+loaderView : String -> (String -> msg) -> msg -> msg -> Html msg
+loaderView inputValue inputHandler fetchMsg cancelMsg =
     div
         [ class "loader-wrapper" ]
-        [ input
-            [ onInput inputHandler ]
-            []
-        , buttonViewWrapper
+        [ inputViewWrapper "loader" inputValue inputHandler
+        , infoButtonViewWrapper
             [ class "fetch-source" ]
             "fetch"
             fetchMsg

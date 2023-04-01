@@ -54,7 +54,6 @@ init flags =
     ( { bookmarks = bookmarks
       , viewMode = DisplayBookmarks
       , draggable = dnd.model
-      , shed = []
       , rowLength = 4
       }
     , Cmd.none
@@ -117,7 +116,6 @@ type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
     , draggable : DnD.Draggable Int Bookmark
-    , shed : List Bookmark
     , rowLength : Int
     }
 
@@ -216,8 +214,8 @@ update msg model =
             , Cmd.none
             )
 
-        ( InputLoaderSource val, Loader v ) ->
-            ( { model | viewMode = Loader (v ++ val) }
+        ( InputLoaderSource v, Loader _ ) ->
+            ( { model | viewMode = Loader v }
             , Cmd.none
             )
 
@@ -248,25 +246,24 @@ update msg model =
         ( OnDrop injectPosition target, DisplayBookmarks ) ->
             let
                 updatedBookmarks =
-                    inject model.shed injectPosition target
+                    inject model.bookmarks injectPosition target
             in
             ( { model
                 | bookmarks = updatedBookmarks
-                , shed = []
               }
             , updateBookmarks (encodeBookmarks updatedBookmarks)
             )
 
         ( DnDMsg dndmsg, DisplayBookmarks ) ->
             let
-                shed =
+                newBookmarks =
                     DnD.getDragMeta model.draggable
                         |> Maybe.map (\x -> List.filter ((/=) x) model.bookmarks)
-                        |> Maybe.withDefault []
+                        |> Maybe.withDefault model.bookmarks
             in
             ( { model
                 | draggable = DnD.update dndmsg model.draggable
-                , shed = shed
+                , bookmarks = newBookmarks
               }
             , Cmd.none
             )
@@ -292,7 +289,10 @@ updateEditingBookmark msg bookmark =
 view : Model -> Html Msg
 view model =
     div
-        [ class "toplevel" ]
+        [ class "toplevel"
+        , class "container"
+        , class "is-widescreen"
+        ]
         (case model.viewMode of
             DisplayBookmarks ->
                 [ bookmarkListView
@@ -333,8 +333,8 @@ view model =
                     bookmark
                 ]
 
-            Loader _ ->
-                [ loaderView InputLoaderSource FetchSource Cancel
+            Loader inputValue ->
+                [ loaderView inputValue InputLoaderSource FetchSource Cancel
                 ]
         )
 

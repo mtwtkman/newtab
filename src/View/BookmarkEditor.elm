@@ -3,7 +3,7 @@ module View.BookmarkEditor exposing (bookmarkEditorView)
 import Entity exposing (Bookmark, Title, Url)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import View.Widget exposing (buttonViewWrapper, inputViewWrapper)
+import View.Widget exposing (infoButtonViewWrapper, inputViewWrapper)
 import View.CancelButton exposing (cancelButtonView)
 
 
@@ -40,7 +40,7 @@ inputFormView toMsg inputTitleMsg inputUrlMsg bookmark =
 
 saveButtonView : saveMsg -> Html saveMsg
 saveButtonView msg =
-    buttonViewWrapper
+    infoButtonViewWrapper
         [ class "save" ]
         "save"
         msg
