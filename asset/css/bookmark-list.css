@@ -7,3 +7,19 @@
   display: flex;
   flex-direction: row;
 }
+
+.toplevel > .bookmark-list > .bookmark-items-row > .bookmark-item {
+  width: 100px;
+  border: solid 1px black;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.toplevel > .bookmark-list > .bookmark-items-row > .bookmark-item > .bookmark-item-card {
+  padding: 5px;
+}
+
+.toplevel > .bookmark-list > .bookmark-items-row > .bookmark-item > .bookmark-item-card > .bookmark-info {
+  display: flex;
+  flex-direction: column;
+}

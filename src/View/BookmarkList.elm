@@ -60,32 +60,29 @@ bookmarkView dnd dndModel openHandler removeHandler i bookmark =
     div
         [ class "bookmark-item"
         ]
-        [ div
-            [ class "bookmark-dnd-area"
+        [ droppable dnd dndModel i
+        , dnd.draggable bookmark
+            [ class "bookmark-item-card"
             ]
-            [ droppable dnd dndModel i
-            , dnd.draggable bookmark
-                [ class "bookmark-item-card"
+            [ div
+                [ class "bookmark-info"
                 ]
-                [ div
-                    [ class "bookmark-info"
-                    ]
-                    [ a
-                        [ href bookmark.url ]
-                        [ img
-                            [ defaultSizedFaviconUrl bookmark |> src
-                            , title bookmark.title
-                            ]
-                            []
+                [ a
+                    [ href bookmark.url ]
+                    [ img
+                        [ defaultSizedFaviconUrl bookmark |> src
+                        , title bookmark.title
+                        , class "thumbnail"
                         ]
-                    , text bookmark.title
-                    , button
-                        [ onClick (openHandler (KnownBookmark i bookmark)) ]
-                        [ text "*" ]
-                    , button
-                        [ onClick (removeHandler i) ]
-                        [ text "-" ]
+                        []
                     ]
+                , text bookmark.title
+                , button
+                    [ onClick (openHandler (KnownBookmark i bookmark)) ]
+                    [ text "*" ]
+                , button
+                    [ onClick (removeHandler i) ]
+                    [ text "-" ]
                 ]
             ]
         ]
@@ -133,17 +130,15 @@ droppable dnd dndModel index =
     dnd.droppable
         index
         [ class "bookmark-droppable-zone"
-        , class "column"
-        , class "is-1"
         , if is_on then
             class "drag-over"
 
           else
             class "non-touched"
         ]
-        (if is_on
-          then
+        (if is_on then
             [ text "|" ]
-          else
+
+         else
             []
         )

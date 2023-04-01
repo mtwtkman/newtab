@@ -12099,8 +12099,6 @@ var $author$project$View$BookmarkList$droppable = F3(
 			_List_fromArray(
 				[
 					$elm$html$Html$Attributes$class('bookmark-droppable-zone'),
-					$elm$html$Html$Attributes$class('column'),
-					$elm$html$Html$Attributes$class('is-1'),
 					is_on ? $elm$html$Html$Attributes$class('drag-over') : $elm$html$Html$Attributes$class('non-touched')
 				]),
 			is_on ? _List_fromArray(
@@ -12125,74 +12123,66 @@ var $author$project$View$BookmarkList$bookmarkView = F6(
 				]),
 			_List_fromArray(
 				[
-					A2(
-					$elm$html$Html$div,
+					A3($author$project$View$BookmarkList$droppable, dnd, dndModel, i),
+					A3(
+					dnd.draggable,
+					bookmark,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$class('bookmark-dnd-area')
+							$elm$html$Html$Attributes$class('bookmark-item-card')
 						]),
 					_List_fromArray(
 						[
-							A3($author$project$View$BookmarkList$droppable, dnd, dndModel, i),
-							A3(
-							dnd.draggable,
-							bookmark,
+							A2(
+							$elm$html$Html$div,
 							_List_fromArray(
 								[
-									$elm$html$Html$Attributes$class('bookmark-item-card')
+									$elm$html$Html$Attributes$class('bookmark-info')
 								]),
 							_List_fromArray(
 								[
 									A2(
-									$elm$html$Html$div,
+									$elm$html$Html$a,
 									_List_fromArray(
 										[
-											$elm$html$Html$Attributes$class('bookmark-info')
+											$elm$html$Html$Attributes$href(bookmark.url)
 										]),
 									_List_fromArray(
 										[
 											A2(
-											$elm$html$Html$a,
+											$elm$html$Html$img,
 											_List_fromArray(
 												[
-													$elm$html$Html$Attributes$href(bookmark.url)
+													$elm$html$Html$Attributes$src(
+													$author$project$View$BookmarkList$defaultSizedFaviconUrl(bookmark)),
+													$elm$html$Html$Attributes$title(bookmark.title),
+													$elm$html$Html$Attributes$class('thumbnail')
 												]),
-											_List_fromArray(
-												[
-													A2(
-													$elm$html$Html$img,
-													_List_fromArray(
-														[
-															$elm$html$Html$Attributes$src(
-															$author$project$View$BookmarkList$defaultSizedFaviconUrl(bookmark)),
-															$elm$html$Html$Attributes$title(bookmark.title)
-														]),
-													_List_Nil)
-												])),
-											$elm$html$Html$text(bookmark.title),
-											A2(
-											$elm$html$Html$button,
-											_List_fromArray(
-												[
-													$elm$html$Html$Events$onClick(
-													openHandler(
-														A2($author$project$Viewmode$KnownBookmark, i, bookmark)))
-												]),
-											_List_fromArray(
-												[
-													$elm$html$Html$text('*')
-												])),
-											A2(
-											$elm$html$Html$button,
-											_List_fromArray(
-												[
-													$elm$html$Html$Events$onClick(
-													removeHandler(i))
-												]),
-											_List_fromArray(
-												[
-													$elm$html$Html$text('-')
-												]))
+											_List_Nil)
+										])),
+									$elm$html$Html$text(bookmark.title),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Events$onClick(
+											openHandler(
+												A2($author$project$Viewmode$KnownBookmark, i, bookmark)))
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('*')
+										])),
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											$elm$html$Html$Events$onClick(
+											removeHandler(i))
+										]),
+									_List_fromArray(
+										[
+											$elm$html$Html$text('-')
 										]))
 								]))
 						]))
