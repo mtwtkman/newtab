@@ -12084,6 +12084,15 @@ var $ir4y$elm_dnd$DnD$getDropMeta = function (_v0) {
 };
 var $author$project$View$BookmarkList$droppable = F3(
 	function (dnd, dndModel, index) {
+		var is_on = function () {
+			var _v0 = $ir4y$elm_dnd$DnD$getDropMeta(dndModel);
+			if (_v0.$ === 'Just') {
+				var to = _v0.a;
+				return _Utils_eq(to, index);
+			} else {
+				return false;
+			}
+		}();
 		return A3(
 			dnd.droppable,
 			index,
@@ -12092,17 +12101,12 @@ var $author$project$View$BookmarkList$droppable = F3(
 					$elm$html$Html$Attributes$class('bookmark-droppable-zone'),
 					$elm$html$Html$Attributes$class('column'),
 					$elm$html$Html$Attributes$class('is-1'),
-					function () {
-					var _v0 = $ir4y$elm_dnd$DnD$getDropMeta(dndModel);
-					if (_v0.$ === 'Just') {
-						var to = _v0.a;
-						return _Utils_eq(to, index);
-					} else {
-						return false;
-					}
-				}() ? $elm$html$Html$Attributes$class('drag-over') : $elm$html$Html$Attributes$class('non-touched')
+					is_on ? $elm$html$Html$Attributes$class('drag-over') : $elm$html$Html$Attributes$class('non-touched')
 				]),
-			_List_Nil);
+			is_on ? _List_fromArray(
+				[
+					$elm$html$Html$text('|')
+				]) : _List_Nil);
 	});
 var $elm$html$Html$img = _VirtualDom_node('img');
 var $elm$html$Html$Attributes$src = function (url) {
@@ -12117,8 +12121,7 @@ var $author$project$View$BookmarkList$bookmarkView = F6(
 			$elm$html$Html$div,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$class('dnd-item'),
-					$elm$html$Html$Attributes$class('column')
+					$elm$html$Html$Attributes$class('bookmark-item')
 				]),
 			_List_fromArray(
 				[
@@ -12126,7 +12129,7 @@ var $author$project$View$BookmarkList$bookmarkView = F6(
 					$elm$html$Html$div,
 					_List_fromArray(
 						[
-							$elm$html$Html$Attributes$class('columns')
+							$elm$html$Html$Attributes$class('bookmark-dnd-area')
 						]),
 					_List_fromArray(
 						[
@@ -12136,7 +12139,7 @@ var $author$project$View$BookmarkList$bookmarkView = F6(
 							bookmark,
 							_List_fromArray(
 								[
-									$elm$html$Html$Attributes$class('column')
+									$elm$html$Html$Attributes$class('bookmark-item-card')
 								]),
 							_List_fromArray(
 								[
@@ -12144,7 +12147,7 @@ var $author$project$View$BookmarkList$bookmarkView = F6(
 									$elm$html$Html$div,
 									_List_fromArray(
 										[
-											$elm$html$Html$Attributes$class('bookmark-item')
+											$elm$html$Html$Attributes$class('bookmark-info')
 										]),
 									_List_fromArray(
 										[
@@ -12164,9 +12167,9 @@ var $author$project$View$BookmarkList$bookmarkView = F6(
 															$author$project$View$BookmarkList$defaultSizedFaviconUrl(bookmark)),
 															$elm$html$Html$Attributes$title(bookmark.title)
 														]),
-													_List_Nil),
-													$elm$html$Html$text(bookmark.title)
+													_List_Nil)
 												])),
+											$elm$html$Html$text(bookmark.title),
 											A2(
 											$elm$html$Html$button,
 											_List_fromArray(
@@ -12225,7 +12228,7 @@ var $author$project$View$BookmarkList$bookmarkListView = F6(
 						$elm$html$Html$div,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$class('columns')
+								$elm$html$Html$Attributes$class('bookmark-items-row')
 							]),
 						A2(
 							$elm$core$List$map,
@@ -12358,26 +12361,33 @@ var $author$project$Main$view = function (model) {
 		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('toplevel'),
-				$elm$html$Html$Attributes$class('container'),
-				$elm$html$Html$Attributes$class('is-widescreen')
+				$elm$html$Html$Attributes$class('toplevel')
 			]),
 		function () {
 			var _v0 = model.viewMode;
 			switch (_v0.$) {
 				case 'DisplayBookmarks':
-					return _Utils_ap(
-						_List_fromArray(
-							[
-								A6($author$project$View$BookmarkList$bookmarkListView, model.rowLength, $author$project$Main$dnd, model.draggable, $author$project$Main$OpenEdit, $author$project$Main$Remove, model.bookmarks),
-								$author$project$Main$newBookmarkAddButtonView,
-								$author$project$View$Loader$loaderSettingButtonView($author$project$Main$LoadBookmarks),
-								A2($ir4y$elm_dnd$DnD$dragged, model.draggable, $author$project$View$BookmarkList$dragged)
-							]),
-						$elm$core$List$isEmpty(model.bookmarks) ? _List_Nil : _List_fromArray(
-							[
-								$author$project$View$Export$exportBookmarksView($author$project$Main$ExportBookmarks)
-							]));
+					return _List_fromArray(
+						[
+							A2(
+							$elm$html$Html$div,
+							_List_fromArray(
+								[
+									$elm$html$Html$Attributes$class('widgets')
+								]),
+							_Utils_ap(
+								_List_fromArray(
+									[
+										$author$project$Main$newBookmarkAddButtonView,
+										$author$project$View$Loader$loaderSettingButtonView($author$project$Main$LoadBookmarks),
+										A2($ir4y$elm_dnd$DnD$dragged, model.draggable, $author$project$View$BookmarkList$dragged)
+									]),
+								$elm$core$List$isEmpty(model.bookmarks) ? _List_Nil : _List_fromArray(
+									[
+										$author$project$View$Export$exportBookmarksView($author$project$Main$ExportBookmarks)
+									]))),
+							A6($author$project$View$BookmarkList$bookmarkListView, model.rowLength, $author$project$Main$dnd, model.draggable, $author$project$Main$OpenEdit, $author$project$Main$Remove, model.bookmarks)
+						]);
 				case 'EditBookmark':
 					if (_v0.b.$ === 'NewBookmark') {
 						var bookmark = _v0.a;

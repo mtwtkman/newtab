@@ -1,0 +1,9 @@
+.toplevel > .bookmark-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.toplevel > .bookmark-list > .bookmark-items-row {
+  display: flex;
+  flex-direction: row;
+}

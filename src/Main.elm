@@ -290,28 +290,31 @@ view : Model -> Html Msg
 view model =
     div
         [ class "toplevel"
-        , class "container"
-        , class "is-widescreen"
         ]
         (case model.viewMode of
             DisplayBookmarks ->
-                [ bookmarkListView
+                [ div
+                    [ class "widgets"
+                    ]
+                    ([ newBookmarkAddButtonView
+                     , loaderSettingButtonView LoadBookmarks
+                     , DnD.dragged model.draggable dragged
+                     ]
+                        ++ (if List.isEmpty model.bookmarks then
+                                []
+
+                            else
+                                [ exportBookmarksView ExportBookmarks ]
+                           )
+                    )
+                , bookmarkListView
                     model.rowLength
                     dnd
                     model.draggable
                     OpenEdit
                     Remove
                     model.bookmarks
-                , newBookmarkAddButtonView
-                , loaderSettingButtonView LoadBookmarks
-                , DnD.dragged model.draggable dragged
                 ]
-                    ++ (if List.isEmpty model.bookmarks then
-                            []
-
-                        else
-                            [ exportBookmarksView ExportBookmarks ]
-                       )
 
             EditBookmark bookmark NewBookmark ->
                 [ bookmarkEditorView

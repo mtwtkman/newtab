@@ -29,7 +29,7 @@ bookmarkListView rowLength dnd dndModel openHandler removeHandler bookmarks =
         (List.map
             (\xs ->
                 div
-                    [ class "columns"
+                    [ class "bookmark-items-row"
                     ]
                     (List.map
                         (\( i, b ) ->
@@ -58,18 +58,17 @@ bookmarkView :
     -> Html msg
 bookmarkView dnd dndModel openHandler removeHandler i bookmark =
     div
-        [ class "dnd-item"
-        , class "column"
+        [ class "bookmark-item"
         ]
         [ div
-            [ class "columns"
+            [ class "bookmark-dnd-area"
             ]
             [ droppable dnd dndModel i
             , dnd.draggable bookmark
-                [ class "column"
+                [ class "bookmark-item-card"
                 ]
                 [ div
-                    [ class "bookmark-item"
+                    [ class "bookmark-info"
                     ]
                     [ a
                         [ href bookmark.url ]
@@ -78,8 +77,8 @@ bookmarkView dnd dndModel openHandler removeHandler i bookmark =
                             , title bookmark.title
                             ]
                             []
-                        , text bookmark.title
                         ]
+                    , text bookmark.title
                     , button
                         [ onClick (openHandler (KnownBookmark i bookmark)) ]
                         [ text "*" ]
@@ -122,22 +121,29 @@ droppable :
     -> Int
     -> Html msg
 droppable dnd dndModel index =
-    dnd.droppable
-        index
-        [ class "bookmark-droppable-zone"
-        , class "column"
-        , class "is-1"
-        , if
+    let
+        is_on =
             case DnD.getDropMeta dndModel of
                 Just to ->
                     to == index
 
                 _ ->
                     False
-          then
+    in
+    dnd.droppable
+        index
+        [ class "bookmark-droppable-zone"
+        , class "column"
+        , class "is-1"
+        , if is_on then
             class "drag-over"
 
           else
             class "non-touched"
         ]
-        []
+        (if is_on
+          then
+            [ text "|" ]
+          else
+            []
+        )
