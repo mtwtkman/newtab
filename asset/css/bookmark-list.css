@@ -22,4 +22,5 @@
 .toplevel > .bookmark-list > .bookmark-items-row > .bookmark-item > .bookmark-item-card > .bookmark-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
 }

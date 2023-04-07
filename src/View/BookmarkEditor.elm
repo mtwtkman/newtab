@@ -1,47 +1,113 @@
-module View.BookmarkEditor exposing (bookmarkEditorView)
+module View.BookmarkEditor exposing
+    ( Model
+    , Msg(..)
+    , initModel
+    , update
+    , view
+    )
 
 import Entity exposing (Bookmark, Title, Url)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import View.Widget exposing (infoButtonViewWrapper, inputViewWrapper)
 import View.CancelButton exposing (cancelButtonView)
+import View.Widget exposing (dangerButtonViewWrapper, infoButtonViewWrapper, inputViewWrapper)
 
 
-type alias ToMsg subMsg msg =
-    subMsg -> msg
+type alias Editting =
+    { url : Url
+    , title : Title
+    }
 
 
-type alias InputTitle subMsg =
-    Title -> subMsg
+type alias Model =
+    { bookmark : Bookmark
+    , editting : Maybe Editting
+    }
 
 
-type alias InputUrl subMsg =
-    Url -> subMsg
+initModel : Bookmark -> Model
+initModel bookmark =
+    { bookmark = bookmark
+    , editting = Nothing
+    }
 
 
-bookmarkEditorView : ToMsg subMsg msg -> InputTitle subMsg -> InputUrl subMsg -> msg -> msg -> Bookmark -> Html msg
-bookmarkEditorView liftSubMsg inputTitleHandler inputUrlHandler saveMsg cancelMsg bookmark =
+type Msg
+    = InputUrl Url
+    | InputTitle Title
+    | Save
+    | Cancel
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case ( msg, model.editting ) of
+        ( InputUrl url, Just editting ) ->
+            ( { model
+                | editting = Just { editting | url = url }
+              }
+            , Cmd.none
+            )
+
+        ( InputTitle title, Just editting ) ->
+            ( { model
+                | editting = Just { editting | title = title }
+              }
+            , Cmd.none
+            )
+
+        ( Save, Just editting ) ->
+            ( { model
+                | bookmark =
+                    { url = editting.url
+                    , title = editting.title
+                    }
+                , editting = Nothing
+              }
+            , Cmd.none
+            )
+
+        ( Cancel, Just _ ) ->
+            ( { model
+                | editting = Nothing
+              }
+            , Cmd.none
+            )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+view : Model -> Html Msg
+view model =
     div
         [ class "bookmark-editor" ]
-        [ inputFormView liftSubMsg inputTitleHandler inputUrlHandler bookmark
-        , saveButtonView saveMsg
-        , cancelButtonView cancelMsg
+        [ inputFormView model.bookmark
+        , saveButtonView
+        , cancelButtonView
         ]
 
 
-inputFormView : ToMsg subMsg msg -> InputTitle subMsg -> InputUrl subMsg -> Bookmark -> Html msg
-inputFormView toMsg inputTitleMsg inputUrlMsg bookmark =
+inputFormView : Bookmark -> Html Msg
+inputFormView bookmark =
     div
         [ class "input-form" ]
-        [ Html.map toMsg (inputViewWrapper "title" bookmark.title inputTitleMsg)
-        , Html.map toMsg (inputViewWrapper "url" bookmark.url inputUrlMsg)
+        [ inputViewWrapper "title" bookmark.title InputTitle
+        , inputViewWrapper "url" bookmark.url InputTitle
         ]
 
 
-saveButtonView : saveMsg -> Html saveMsg
-saveButtonView msg =
+saveButtonView : Html Msg
+saveButtonView =
     infoButtonViewWrapper
         [ class "save" ]
         "save"
-        msg
+        Save
 
+
+cancelButtonView : Html Msg
+cancelButtonView =
+    dangerButtonViewWrapper
+        [ class "cancel" ]
+        "cancel"
+        Cancel

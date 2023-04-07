@@ -1,20 +1,16 @@
-port module Main exposing (main)
+module Main exposing (main)
 
 import Browser exposing (element)
-import DnD
-import Entity exposing (Bookmark, Title, Url, newBookmark)
-import Func exposing (inject)
-import Html exposing (Html, button, div, i, text)
-import Html.Attributes exposing (class, title)
-import Html.Events exposing (onClick)
-import Http
+import Entity exposing (Bookmark, decodeBookmarks, newBookmark)
+import Html exposing (Html, div)
+import Html.Attributes exposing (class)
 import Json.Decode as D
-import Json.Encode as E
-import View.BookmarkEditor exposing (bookmarkEditorView)
-import View.BookmarkList exposing (bookmarkListView, dragged)
+import Ports exposing (exportBookmarks)
+import View.BookmarkEditor as Editor
+import View.BookmarkList as BL
 import View.Export exposing (exportBookmarksView)
-import View.Loader exposing (loaderSettingButtonView, loaderView)
-import Viewmode exposing (EditType(..), ViewMode(..))
+import View.Loader as Loader exposing (Model)
+import View.Widget exposing (infoButtonViewWrapper)
 
 
 
@@ -31,14 +27,15 @@ main =
         }
 
 
+type ViewMode
+    = DisplayBookmarks BL.Model
+    | SourceLoader Loader.Model
+    | AddNewBookmark Editor.Model
 
--- PORTS
 
-
-port updateBookmarks : E.Value -> Cmd msg
-
-
-port exportBookmarks : () -> Cmd msg
+rowLength : Int
+rowLength =
+    4
 
 
 
@@ -52,56 +49,10 @@ init flags =
             decodeBookmarks flags
     in
     ( { bookmarks = bookmarks
-      , viewMode = DisplayBookmarks
-      , draggable = dnd.model
-      , rowLength = 4
+      , viewMode = DisplayBookmarks (BL.initModel rowLength bookmarks)
       }
     , Cmd.none
     )
-
-
-
--- DECODER
-
-
-decodeBookmarks : Flags -> List Bookmark
-decodeBookmarks flags =
-    case D.decodeValue bookmarksDecoder flags of
-        Err _ ->
-            []
-
-        Ok x ->
-            x
-
-
-bookmarkDecoder : D.Decoder Bookmark
-bookmarkDecoder =
-    D.map2
-        Bookmark
-        (D.field "url" D.string)
-        (D.field "title" D.string)
-
-
-bookmarksDecoder : D.Decoder (List Bookmark)
-bookmarksDecoder =
-    D.list bookmarkDecoder
-
-
-
--- ENCODER
-
-
-encodeBookmark : Bookmark -> E.Value
-encodeBookmark bookmark =
-    E.object
-        [ ( "url", E.string bookmark.url )
-        , ( "title", E.string bookmark.title )
-        ]
-
-
-encodeBookmarks : List Bookmark -> E.Value
-encodeBookmarks bookmarks =
-    E.list encodeBookmark bookmarks
 
 
 
@@ -115,14 +66,7 @@ type alias Flags =
 type alias Model =
     { bookmarks : List Bookmark
     , viewMode : ViewMode
-    , draggable : DnD.Draggable Int Bookmark
-    , rowLength : Int
     }
-
-
-dnd : DnD.DraggableInit Int Bookmark Msg
-dnd =
-    DnD.init DnDMsg OnDrop
 
 
 
@@ -130,23 +74,12 @@ dnd =
 
 
 type Msg
-    = LoadBookmarks
-    | OpenEdit EditType
-    | Edit EditMsg
-    | Save
-    | Cancel
-    | Remove Int
-    | FetchSource
-    | GotSource (Result Http.Error (List Bookmark))
-    | InputLoaderSource String
+    = OpenLoader
     | ExportBookmarks
-    | OnDrop Int Bookmark
-    | DnDMsg (DnD.Msg Int Bookmark)
-
-
-type EditMsg
-    = InputUrl Url
-    | InputTitle Title
+    | OpenNewBookmarkEditor
+    | GotAddNewBookmarkMsg Editor.Msg
+    | GotLoaderMsg Loader.Msg
+    | GotBookmarkListMsg BL.Msg
 
 
 
@@ -156,130 +89,51 @@ type EditMsg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.viewMode ) of
-        ( OpenEdit NewBookmark, DisplayBookmarks ) ->
-            ( { model | viewMode = EditBookmark newBookmark NewBookmark }, Cmd.none )
+        ( OpenLoader, DisplayBookmarks _ ) ->
+            ( { model | viewMode = SourceLoader Loader.initModel }, Cmd.none )
 
-        ( OpenEdit (KnownBookmark i bookmark), DisplayBookmarks ) ->
-            ( { model | viewMode = EditBookmark bookmark (KnownBookmark i bookmark) }, Cmd.none )
-
-        ( Edit editMsg, EditBookmark bookmark editType ) ->
-            let
-                newViewMode =
-                    EditBookmark (updateEditingBookmark editMsg bookmark) editType
-            in
-            ( { model | viewMode = newViewMode }, Cmd.none )
-
-        ( Save, EditBookmark bookmark NewBookmark ) ->
-            let
-                updatedBookmarks =
-                    model.bookmarks ++ [ bookmark ]
-            in
-            ( { model
-                | viewMode = DisplayBookmarks
-                , bookmarks = updatedBookmarks
-              }
-            , updateBookmarks (encodeBookmarks updatedBookmarks)
-            )
-
-        ( Save, EditBookmark bookmark (KnownBookmark index _) ) ->
-            let
-                updatedBookmarks =
-                    List.take index model.bookmarks ++ (bookmark :: List.drop (index + 1) model.bookmarks)
-            in
-            ( { model
-                | viewMode = DisplayBookmarks
-                , bookmarks = updatedBookmarks
-              }
-            , updateBookmarks (encodeBookmarks updatedBookmarks)
-            )
-
-        ( Remove index, _ ) ->
-            let
-                updatedBookmarks =
-                    List.indexedMap Tuple.pair model.bookmarks
-                        |> List.filter (\( i, _ ) -> i /= index)
-                        |> List.map Tuple.second
-            in
-            ( { model | bookmarks = updatedBookmarks }
-            , updateBookmarks (encodeBookmarks updatedBookmarks)
-            )
-
-        ( Cancel, _ ) ->
-            ( { model | viewMode = DisplayBookmarks }
-            , Cmd.none
-            )
-
-        ( LoadBookmarks, DisplayBookmarks ) ->
-            ( { model | viewMode = Loader "" }
-            , Cmd.none
-            )
-
-        ( InputLoaderSource v, Loader _ ) ->
-            ( { model | viewMode = Loader v }
-            , Cmd.none
-            )
-
-        ( FetchSource, Loader url ) ->
-            ( model
-            , Http.get
-                { url = url
-                , expect = Http.expectJson GotSource bookmarksDecoder
-                }
-            )
-
-        ( GotSource result, _ ) ->
-            case result of
-                Err _ ->
-                    ( { model | viewMode = DisplayBookmarks }, Cmd.none )
-
-                Ok bookmarks ->
-                    ( { model
-                        | bookmarks = bookmarks
-                        , viewMode = DisplayBookmarks
-                      }
-                    , updateBookmarks (encodeBookmarks bookmarks)
-                    )
-
-        ( ExportBookmarks, _ ) ->
+        ( ExportBookmarks, DisplayBookmarks _ ) ->
             ( model, exportBookmarks () )
 
-        ( OnDrop injectPosition target, DisplayBookmarks ) ->
+        ( OpenNewBookmarkEditor, DisplayBookmarks _ ) ->
+            ( { model | viewMode = AddNewBookmark (Editor.initModel newBookmark) }, Cmd.none )
+
+        ( GotBookmarkListMsg bookmarkListMsg, DisplayBookmarks bookmarkListModel ) ->
             let
-                updatedBookmarks =
-                    inject model.bookmarks injectPosition target
+                ( em, ec ) =
+                    BL.update bookmarkListMsg bookmarkListModel
             in
             ( { model
-                | bookmarks = updatedBookmarks
+                | bookmarks = em.bookmarks
+                , viewMode = DisplayBookmarks em
               }
-            , updateBookmarks (encodeBookmarks updatedBookmarks)
+            , Cmd.map GotBookmarkListMsg ec
             )
 
-        ( DnDMsg dndmsg, DisplayBookmarks ) ->
+        ( GotAddNewBookmarkMsg editorMsg, AddNewBookmark editorModel ) ->
             let
-                newBookmarks =
-                    DnD.getDragMeta model.draggable
-                        |> Maybe.map (\x -> List.filter ((/=) x) model.bookmarks)
-                        |> Maybe.withDefault model.bookmarks
+                ( em, ec ) =
+                    Editor.update editorMsg editorModel
             in
             ( { model
-                | draggable = DnD.update dndmsg model.draggable
-                , bookmarks = newBookmarks
+                | viewMode = AddNewBookmark em
               }
-            , Cmd.none
+            , Cmd.map GotAddNewBookmarkMsg ec
+            )
+
+        ( GotLoaderMsg loaderMsg, SourceLoader loaderModel ) ->
+            let
+                ( em, ec ) =
+                    Loader.update loaderMsg loaderModel
+            in
+            ( { model
+                | viewMode = SourceLoader em
+              }
+            , Cmd.map GotLoaderMsg ec
             )
 
         _ ->
             ( model, Cmd.none )
-
-
-updateEditingBookmark : EditMsg -> Bookmark -> Bookmark
-updateEditingBookmark msg bookmark =
-    case msg of
-        InputUrl url ->
-            { bookmark | url = url }
-
-        InputTitle title ->
-            { bookmark | title = title }
 
 
 
@@ -292,13 +146,12 @@ view model =
         [ class "toplevel"
         ]
         (case model.viewMode of
-            DisplayBookmarks ->
+            DisplayBookmarks bookmarkListModel ->
                 [ div
                     [ class "widgets"
                     ]
                     ([ newBookmarkAddButtonView
-                     , loaderSettingButtonView LoadBookmarks
-                     , DnD.dragged model.draggable dragged
+                     , loaderSettingButtonView
                      ]
                         ++ (if List.isEmpty model.bookmarks then
                                 []
@@ -307,48 +160,34 @@ view model =
                                 [ exportBookmarksView ExportBookmarks ]
                            )
                     )
-                , bookmarkListView
-                    model.rowLength
-                    dnd
-                    model.draggable
-                    OpenEdit
-                    Remove
-                    model.bookmarks
+                , Html.map GotBookmarkListMsg (BL.view bookmarkListModel)
                 ]
 
-            EditBookmark bookmark NewBookmark ->
-                [ bookmarkEditorView
-                    Edit
-                    InputTitle
-                    InputUrl
-                    Save
-                    Cancel
-                    bookmark
+            AddNewBookmark editorModel ->
+                [ Html.map GotAddNewBookmarkMsg (Editor.view editorModel)
                 ]
 
-            EditBookmark bookmark (KnownBookmark _ _) ->
-                [ bookmarkEditorView
-                    Edit
-                    InputTitle
-                    InputUrl
-                    Save
-                    Cancel
-                    bookmark
-                ]
-
-            Loader inputValue ->
-                [ loaderView inputValue InputLoaderSource FetchSource Cancel
+            SourceLoader loaderModel ->
+                [ Html.map GotLoaderMsg (Loader.view loaderModel)
                 ]
         )
 
 
 newBookmarkAddButtonView : Html Msg
 newBookmarkAddButtonView =
-    button
-        [ onClick (OpenEdit NewBookmark)
-        , class "new-bookmark-add-button"
+    infoButtonViewWrapper
+        [ class "new-bookmark-add-button"
         ]
-        [ text "+" ]
+        "+"
+        OpenNewBookmarkEditor
+
+
+loaderSettingButtonView : Html Msg
+loaderSettingButtonView =
+    infoButtonViewWrapper
+        [ class "loader-setting" ]
+        "load"
+        OpenLoader
 
 
 
@@ -356,7 +195,5 @@ newBookmarkAddButtonView =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch
-        [ dnd.subscriptions model.draggable
-        ]
+subscriptions =
+    always Sub.none
