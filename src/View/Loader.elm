@@ -12,6 +12,7 @@ import View.Widget exposing (infoButtonViewWrapper, inputViewWrapper)
 type Model
     = Input String
     | Fetched (List Bookmark)
+    | Canceled
 
 
 type Msg
@@ -49,6 +50,8 @@ update msg model =
                     ( Fetched bookmarks
                     , updateBookmarks (encodeBookmarks bookmarks)
                     )
+        ( Cancel, _) ->
+          ( Canceled, Cmd.none )
 
         _ ->
             ( model, Cmd.none )

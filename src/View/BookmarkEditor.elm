@@ -1,5 +1,5 @@
 module View.BookmarkEditor exposing
-    ( Model
+    ( Model(..)
     , Msg(..)
     , initModel
     , update
@@ -13,23 +13,15 @@ import View.CancelButton exposing (cancelButtonView)
 import View.Widget exposing (dangerButtonViewWrapper, infoButtonViewWrapper, inputViewWrapper)
 
 
-type alias Editting =
-    { url : Url
-    , title : Title
-    }
-
-
-type alias Model =
-    { bookmark : Bookmark
-    , editting : Maybe Editting
-    }
+type Model
+    = Editting Bookmark
+    | Canceled
+    | Saved Bookmark
 
 
 initModel : Bookmark -> Model
-initModel bookmark =
-    { bookmark = bookmark
-    , editting = Nothing
-    }
+initModel =
+    Editting
 
 
 type Msg
@@ -41,38 +33,18 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model.editting ) of
-        ( InputUrl url, Just editting ) ->
-            ( { model
-                | editting = Just { editting | url = url }
-              }
-            , Cmd.none
-            )
+    case ( msg, model ) of
+        ( InputUrl newUrl, Editting bookmark ) ->
+            ( Editting { bookmark | url = newUrl }, Cmd.none )
 
-        ( InputTitle title, Just editting ) ->
-            ( { model
-                | editting = Just { editting | title = title }
-              }
-            , Cmd.none
-            )
+        ( InputTitle newTitle, Editting bookmark ) ->
+            ( Editting { bookmark | title = newTitle }, Cmd.none )
 
-        ( Save, Just editting ) ->
-            ( { model
-                | bookmark =
-                    { url = editting.url
-                    , title = editting.title
-                    }
-                , editting = Nothing
-              }
-            , Cmd.none
-            )
+        ( Save, Editting bookmark ) ->
+            ( Saved bookmark, Cmd.none )
 
-        ( Cancel, Just _ ) ->
-            ( { model
-                | editting = Nothing
-              }
-            , Cmd.none
-            )
+        ( Cancel, Editting _ ) ->
+            ( Canceled, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -80,12 +52,17 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div
-        [ class "bookmark-editor" ]
-        [ inputFormView model.bookmark
-        , saveButtonView
-        , cancelButtonView
-        ]
+    case model of
+        Editting bookmark ->
+            div
+                [ class "bookmark-editor" ]
+                [ inputFormView bookmark
+                , saveButtonView
+                , cancelButtonView
+                ]
+
+        _ ->
+            div [] []
 
 
 inputFormView : Bookmark -> Html Msg
@@ -93,7 +70,7 @@ inputFormView bookmark =
     div
         [ class "input-form" ]
         [ inputViewWrapper "title" bookmark.title InputTitle
-        , inputViewWrapper "url" bookmark.url InputTitle
+        , inputViewWrapper "url" bookmark.url InputUrl
         ]
 
 

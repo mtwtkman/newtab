@@ -172,38 +172,40 @@ update msg model =
             , Cmd.none
             )
 
-        ( EditorMsg Editor.Save, Edit edit ) ->
-            let
-                newBookmarks =
-                    List.take
-                        edit.index
-                        model.bookmarks
-                        ++ (edit.state.bookmark :: List.drop (edit.index + 1) model.bookmarks)
-            in
-            ( { model
-                | bookmarks = newBookmarks
-                , mode = Display Nothing
-              }
-            , Cmd.none
-            )
-
-        ( EditorMsg Editor.Cancel, Edit _ ) ->
-            ( model, Cmd.none )
-
         ( EditorMsg editorMsg, Edit edit ) ->
             let
-                newState =
+                ( m, c ) =
                     Editor.update editorMsg edit.state
             in
-            ( { model
-                | mode =
-                    Edit
-                        { edit
-                            | state = Tuple.first newState
-                        }
-              }
-            , Cmd.map EditorMsg (Tuple.second newState)
-            )
+            case m of
+                Editor.Saved updatedBookmark ->
+                    let
+                        newBookmarks =
+                            List.take
+                                edit.index
+                                model.bookmarks
+                                ++ (updatedBookmark :: List.drop (edit.index + 1) model.bookmarks)
+                    in
+                    ( { model
+                        | bookmarks = newBookmarks
+                        , mode = Display Nothing
+                      }
+                    , Cmd.none
+                    )
+
+                Editor.Canceled ->
+                    ( model, Cmd.none )
+
+                _ ->
+                    ( { model
+                        | mode =
+                            Edit
+                                { edit
+                                    | state = m
+                                }
+                      }
+                    , Cmd.map EditorMsg c
+                    )
 
         _ ->
             ( model, Cmd.none )

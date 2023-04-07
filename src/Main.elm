@@ -1,11 +1,11 @@
 module Main exposing (main)
 
 import Browser exposing (element)
-import Entity exposing (Bookmark, decodeBookmarks, newBookmark)
+import Entity exposing (Bookmark, decodeBookmarks, encodeBookmarks, newBookmark)
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
 import Json.Decode as D
-import Ports exposing (exportBookmarks)
+import Ports exposing (exportBookmarks, updateBookmarks)
 import View.BookmarkEditor as Editor
 import View.BookmarkList as BL
 import View.Export exposing (exportBookmarksView)
@@ -38,6 +38,11 @@ rowLength =
     4
 
 
+initBookmarkList : List Bookmark -> BL.Model
+initBookmarkList =
+    BL.initModel rowLength
+
+
 
 -- INIT
 
@@ -49,7 +54,7 @@ init flags =
             decodeBookmarks flags
     in
     ( { bookmarks = bookmarks
-      , viewMode = DisplayBookmarks (BL.initModel rowLength bookmarks)
+      , viewMode = DisplayBookmarks (initBookmarkList bookmarks)
       }
     , Cmd.none
     )
@@ -115,22 +120,58 @@ update msg model =
                 ( em, ec ) =
                     Editor.update editorMsg editorModel
             in
-            ( { model
-                | viewMode = AddNewBookmark em
-              }
-            , Cmd.map GotAddNewBookmarkMsg ec
-            )
+            case em of
+                Editor.Saved newBookmark ->
+                    let
+                        newBookmarks =
+                            model.bookmarks ++ [ newBookmark ]
+                    in
+                    ( { model
+                        | viewMode = DisplayBookmarks (initBookmarkList newBookmarks)
+                      }
+                    , updateBookmarks (encodeBookmarks newBookmarks)
+                    )
+
+                Editor.Canceled ->
+                    ( { model
+                        | viewMode = DisplayBookmarks (initBookmarkList model.bookmarks)
+                      }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( { model
+                        | viewMode = AddNewBookmark em
+                      }
+                    , Cmd.map GotAddNewBookmarkMsg ec
+                    )
 
         ( GotLoaderMsg loaderMsg, SourceLoader loaderModel ) ->
             let
                 ( em, ec ) =
                     Loader.update loaderMsg loaderModel
             in
-            ( { model
-                | viewMode = SourceLoader em
-              }
-            , Cmd.map GotLoaderMsg ec
-            )
+            case em of
+                Loader.Canceled ->
+                    ( { model
+                        | viewMode = DisplayBookmarks (initBookmarkList model.bookmarks)
+                      }
+                    , Cmd.none
+                    )
+
+                Loader.Fetched newBookmarks ->
+                    ( { model
+                        | viewMode = DisplayBookmarks (initBookmarkList newBookmarks)
+                      }
+                    , Cmd.map GotLoaderMsg ec
+                    )
+
+                _ ->
+                    ( { model
+                        | viewMode = SourceLoader em
+                      }
+                    , Cmd.map GotLoaderMsg ec
+                    )
 
         _ ->
             ( model, Cmd.none )
