@@ -11133,7 +11133,8 @@ var $author$project$View$BookmarkList$update = F2(
 											bookmarks: newBookmarks,
 											mode: $author$project$View$BookmarkList$Display($elm$core$Maybe$Nothing)
 										}),
-									$elm$core$Platform$Cmd$none);
+									$author$project$Ports$updateBookmarks(
+										$author$project$Entity$encodeBookmarks(newBookmarks)));
 							} else {
 								return _Utils_Tuple2(
 									_Utils_update(
@@ -11919,7 +11920,7 @@ var $author$project$View$BookmarkList$droppable = function (index) {
 				$elm$json$Json$Decode$succeed($author$project$View$BookmarkList$Drop)),
 				A2(
 				$author$project$View$BookmarkList$hijackOn,
-				'',
+				'dragover',
 				$elm$json$Json$Decode$succeed(
 					$author$project$View$BookmarkList$DragOver(index)))
 			]),

@@ -151,7 +151,7 @@ update msg model =
                         | bookmarks = newBookmarks
                         , mode = Display Nothing
                       }
-                    , Cmd.none
+                    , updateBookmarks (encodeBookmarks newBookmarks)
                     )
 
                 Nothing ->
@@ -308,7 +308,7 @@ droppable index =
         , on "dragenter" (D.succeed <| DragEnter index)
         , on "dragleave" (D.succeed DragLeave)
         , on "drop" (D.succeed <| Drop)
-        , hijackOn "" (D.succeed <| DragOver index)
+        , hijackOn "dragover" (D.succeed <| DragOver index)
         ]
         []
 
