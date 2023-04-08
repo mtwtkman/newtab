@@ -35,7 +35,7 @@ type ViewMode
 
 rowLength : Int
 rowLength =
-    4
+    8
 
 
 initBookmarkList : List Bookmark -> BL.Model
