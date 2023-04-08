@@ -10880,11 +10880,12 @@ var $author$project$View$BookmarkEditor$update = F2(
 			return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$View$BookmarkList$Edit = function (a) {
-	return {$: 'Edit', a: a};
-};
-var $author$project$View$BookmarkList$EditorMsg = function (a) {
-	return {$: 'EditorMsg', a: a};
+var $author$project$View$BookmarkList$Edit = F2(
+	function (a, b) {
+		return {$: 'Edit', a: a, b: b};
+	});
+var $author$project$View$BookmarkList$GotEditorMsg = function (a) {
+	return {$: 'GotEditorMsg', a: a};
 };
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
@@ -11040,16 +11041,35 @@ var $author$project$Ports$updateBookmarks = _Platform_outgoingPort('updateBookma
 var $author$project$View$BookmarkList$update = F2(
 	function (msg, model) {
 		var _v0 = _Utils_Tuple2(msg, model.mode);
-		_v0$8:
+		_v0$10:
 		while (true) {
 			if (_v0.b.$ === 'Display') {
 				if (_v0.b.a.$ === 'Just') {
 					switch (_v0.a.$) {
-						case 'DragEnd':
-							var _v4 = _v0.a;
+						case 'Drag':
+							var _v1 = _v0.a;
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						case 'DragOver':
+							var index = _v0.a.a;
 							var grabbed = _v0.b.a.a;
-							var _v5 = grabbed.hoveredIndex;
-							if (_v5.$ === 'Nothing') {
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										mode: $author$project$View$BookmarkList$Display(
+											$elm$core$Maybe$Just(
+												_Utils_update(
+													grabbed,
+													{
+														hoveredIndex: $elm$core$Maybe$Just(index)
+													})))
+									}),
+								$elm$core$Platform$Cmd$none);
+						case 'DragEnd':
+							var _v5 = _v0.a;
+							var grabbed = _v0.b.a.a;
+							var _v6 = grabbed.hoveredIndex;
+							if (_v6.$ === 'Nothing') {
 								return _Utils_Tuple2(
 									_Utils_update(
 										model,
@@ -11058,7 +11078,7 @@ var $author$project$View$BookmarkList$update = F2(
 										}),
 									$elm$core$Platform$Cmd$none);
 							} else {
-								var targetIndex = _v5.a;
+								var targetIndex = _v6.a;
 								var newBookmarks = A3($author$project$Func$inject, grabbed.dropAreaBookmarks, targetIndex, grabbed.bookmark);
 								return _Utils_Tuple2(
 									_Utils_update(
@@ -11086,7 +11106,7 @@ var $author$project$View$BookmarkList$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						case 'DragLeave':
-							var _v6 = _v0.a;
+							var _v7 = _v0.a;
 							var grabbed = _v0.b.a.a;
 							return _Utils_Tuple2(
 								_Utils_update(
@@ -11100,11 +11120,11 @@ var $author$project$View$BookmarkList$update = F2(
 									}),
 								$elm$core$Platform$Cmd$none);
 						case 'Drop':
-							var _v7 = _v0.a;
+							var _v8 = _v0.a;
 							var grabbed = _v0.b.a.a;
-							var _v8 = grabbed.hoveredIndex;
-							if (_v8.$ === 'Just') {
-								var targetIndex = _v8.a;
+							var _v9 = grabbed.hoveredIndex;
+							if (_v9.$ === 'Just') {
+								var targetIndex = _v9.a;
 								var newBookmarks = A3($author$project$Func$inject, grabbed.dropAreaBookmarks, targetIndex, grabbed.bookmark);
 								return _Utils_Tuple2(
 									_Utils_update(
@@ -11124,20 +11144,20 @@ var $author$project$View$BookmarkList$update = F2(
 									$elm$core$Platform$Cmd$none);
 							}
 						default:
-							break _v0$8;
+							break _v0$10;
 					}
 				} else {
 					switch (_v0.a.$) {
 						case 'DragStart':
-							var _v1 = _v0.a;
-							var sourceIndex = _v1.a;
-							var bookmark = _v1.b;
-							var _v2 = _v0.b.a;
+							var _v2 = _v0.a;
+							var sourceIndex = _v2.a;
+							var bookmark = _v2.b;
+							var _v3 = _v0.b.a;
 							var dropAreaBookmarks = A2(
 								$elm$core$List$filterMap,
-								function (_v3) {
-									var i = _v3.a;
-									var b = _v3.b;
+								function (_v4) {
+									var i = _v4.a;
+									var b = _v4.b;
 									return _Utils_eq(i, sourceIndex) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(b);
 								},
 								A2($elm$core$List$indexedMap, $elm$core$Tuple$pair, model.bookmarks));
@@ -11152,14 +11172,14 @@ var $author$project$View$BookmarkList$update = F2(
 								$elm$core$Platform$Cmd$none);
 						case 'Remove':
 							var index = _v0.a.a;
-							var _v9 = _v0.b.a;
+							var _v10 = _v0.b.a;
 							var updatedBookmarks = A2(
 								$elm$core$List$map,
 								$elm$core$Tuple$second,
 								A2(
 									$elm$core$List$filter,
-									function (_v10) {
-										var i = _v10.a;
+									function (_v11) {
+										var i = _v11.a;
 										return !_Utils_eq(i, index);
 									},
 									A2($elm$core$List$indexedMap, $elm$core$Tuple$pair, model.bookmarks)));
@@ -11170,41 +11190,42 @@ var $author$project$View$BookmarkList$update = F2(
 								$author$project$Ports$updateBookmarks(
 									$author$project$Entity$encodeBookmarks(updatedBookmarks)));
 						case 'OpenEdit':
-							var _v11 = _v0.a;
-							var index = _v11.a;
-							var bookmark = _v11.b;
-							var _v12 = _v0.b.a;
+							var _v12 = _v0.a;
+							var index = _v12.a;
+							var bookmark = _v12.b;
+							var _v13 = _v0.b.a;
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
 									{
-										mode: $author$project$View$BookmarkList$Edit(
-											{
-												index: index,
-												state: $author$project$View$BookmarkEditor$initModel(bookmark)
-											})
+										mode: A2(
+											$author$project$View$BookmarkList$Edit,
+											index,
+											$author$project$View$BookmarkEditor$initModel(bookmark))
 									}),
 								$elm$core$Platform$Cmd$none);
 						default:
-							break _v0$8;
+							break _v0$10;
 					}
 				}
 			} else {
-				if (_v0.a.$ === 'EditorMsg') {
+				if (_v0.a.$ === 'GotEditorMsg') {
 					var editorMsg = _v0.a.a;
-					var edit = _v0.b.a;
-					var _v13 = A2($author$project$View$BookmarkEditor$update, editorMsg, edit.state);
-					var m = _v13.a;
-					var c = _v13.b;
+					var _v14 = _v0.b;
+					var index = _v14.a;
+					var editorModel = _v14.b;
+					var _v15 = A2($author$project$View$BookmarkEditor$update, editorMsg, editorModel);
+					var m = _v15.a;
+					var c = _v15.b;
 					switch (m.$) {
 						case 'Saved':
 							var updatedBookmark = m.a;
 							var newBookmarks = _Utils_ap(
-								A2($elm$core$List$take, edit.index, model.bookmarks),
+								A2($elm$core$List$take, index, model.bookmarks),
 								A2(
 									$elm$core$List$cons,
 									updatedBookmark,
-									A2($elm$core$List$drop, edit.index + 1, model.bookmarks)));
+									A2($elm$core$List$drop, index + 1, model.bookmarks)));
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
@@ -11212,23 +11233,26 @@ var $author$project$View$BookmarkList$update = F2(
 										bookmarks: newBookmarks,
 										mode: $author$project$View$BookmarkList$Display($elm$core$Maybe$Nothing)
 									}),
-								$elm$core$Platform$Cmd$none);
+								A2($elm$core$Platform$Cmd$map, $author$project$View$BookmarkList$GotEditorMsg, c));
 						case 'Canceled':
-							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										mode: $author$project$View$BookmarkList$Display($elm$core$Maybe$Nothing)
+									}),
+								$elm$core$Platform$Cmd$none);
 						default:
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
 									{
-										mode: $author$project$View$BookmarkList$Edit(
-											_Utils_update(
-												edit,
-												{state: m}))
+										mode: A2($author$project$View$BookmarkList$Edit, index, m)
 									}),
-								A2($elm$core$Platform$Cmd$map, $author$project$View$BookmarkList$EditorMsg, c));
+								$elm$core$Platform$Cmd$none);
 					}
 				} else {
-					break _v0$8;
+					break _v0$10;
 				}
 			}
 		}
@@ -11850,6 +11874,9 @@ var $author$project$View$BookmarkList$DragEnter = function (a) {
 	return {$: 'DragEnter', a: a};
 };
 var $author$project$View$BookmarkList$DragLeave = {$: 'DragLeave'};
+var $author$project$View$BookmarkList$DragOver = function (a) {
+	return {$: 'DragOver', a: a};
+};
 var $author$project$View$BookmarkList$Drop = {$: 'Drop'};
 var $author$project$View$BookmarkList$hijack = function (msg) {
 	return _Utils_Tuple2(msg, true);
@@ -11878,18 +11905,23 @@ var $author$project$View$BookmarkList$droppable = function (index) {
 			[
 				$elm$html$Html$Attributes$class('droppable'),
 				A2(
-				$author$project$View$BookmarkList$hijackOn,
+				$elm$html$Html$Events$on,
 				'dragenter',
 				$elm$json$Json$Decode$succeed(
 					$author$project$View$BookmarkList$DragEnter(index))),
 				A2(
-				$author$project$View$BookmarkList$hijackOn,
+				$elm$html$Html$Events$on,
 				'dragleave',
 				$elm$json$Json$Decode$succeed($author$project$View$BookmarkList$DragLeave)),
 				A2(
-				$author$project$View$BookmarkList$hijackOn,
+				$elm$html$Html$Events$on,
 				'drop',
-				$elm$json$Json$Decode$succeed($author$project$View$BookmarkList$Drop))
+				$elm$json$Json$Decode$succeed($author$project$View$BookmarkList$Drop)),
+				A2(
+				$author$project$View$BookmarkList$hijackOn,
+				'',
+				$elm$json$Json$Decode$succeed(
+					$author$project$View$BookmarkList$DragOver(index)))
 			]),
 		_List_Nil);
 };
@@ -11897,6 +11929,8 @@ var $author$project$Func$flip = F3(
 	function (f, b, a) {
 		return A2(f, a, b);
 	});
+var $author$project$View$BookmarkList$Drag = {$: 'Drag'};
+var $author$project$View$BookmarkList$DragEnd = {$: 'DragEnd'};
 var $author$project$View$BookmarkList$DragStart = F2(
 	function (a, b) {
 		return {$: 'DragStart', a: a, b: b};
@@ -11980,10 +12014,18 @@ var $author$project$View$BookmarkList$itemView = F2(
 					$elm$html$Html$Attributes$class('bookmark-item'),
 					$elm$html$Html$Attributes$draggable('true'),
 					A2(
-					$author$project$View$BookmarkList$hijackOn,
-					'DragStart',
+					$elm$html$Html$Events$on,
+					'drag',
+					$elm$json$Json$Decode$succeed($author$project$View$BookmarkList$Drag)),
+					A2(
+					$elm$html$Html$Events$on,
+					'dragstart',
 					$elm$json$Json$Decode$succeed(
-						A2($author$project$View$BookmarkList$DragStart, i, bookmark)))
+						A2($author$project$View$BookmarkList$DragStart, i, bookmark))),
+					A2(
+					$elm$html$Html$Events$on,
+					'dragend',
+					$elm$json$Json$Decode$succeed($author$project$View$BookmarkList$DragEnd))
 				]),
 			_List_fromArray(
 				[
@@ -12049,38 +12091,50 @@ var $author$project$View$BookmarkList$view = function (model) {
 		$author$project$Func$chunk,
 		model.rowLength,
 		A2($elm$core$List$indexedMap, $elm$core$Tuple$pair, model.bookmarks));
-	return A2(
-		$elm$html$Html$div,
-		_List_fromArray(
-			[
-				$elm$html$Html$Attributes$class('bookmark-list')
-			]),
-		A2(
-			$elm$core$List$map,
-			function (xs) {
-				return A2(
-					$elm$html$Html$div,
-					_List_fromArray(
-						[
-							$elm$html$Html$Attributes$class('bookmark-items-row')
-						]),
-					A2(
-						$elm$core$List$map,
-						function (_v0) {
-							var i = _v0.a;
-							var b = _v0.b;
-							return A2(
-								$elm$html$Html$div,
-								_List_Nil,
-								_List_fromArray(
-									[
-										$author$project$View$BookmarkList$droppable(i),
-										A2($author$project$View$BookmarkList$itemView, i, b)
-									]));
-						},
-						xs));
-			},
-			chunked));
+	var _v0 = model.mode;
+	if (_v0.$ === 'Display') {
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('bookmark-list')
+				]),
+			A2(
+				$elm$core$List$map,
+				function (xs) {
+					return A2(
+						$elm$html$Html$div,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$class('bookmark-items-row')
+							]),
+						A2(
+							$elm$core$List$map,
+							function (_v1) {
+								var i = _v1.a;
+								var b = _v1.b;
+								return A2(
+									$elm$html$Html$div,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$class('bookmark-items-cell')
+										]),
+									_List_fromArray(
+										[
+											$author$project$View$BookmarkList$droppable(i),
+											A2($author$project$View$BookmarkList$itemView, i, b)
+										]));
+							},
+							xs));
+				},
+				chunked));
+	} else {
+		var editorModel = _v0.b;
+		return A2(
+			$elm$html$Html$map,
+			$author$project$View$BookmarkList$GotEditorMsg,
+			$author$project$View$BookmarkEditor$view(editorModel));
+	}
 };
 var $author$project$View$Loader$Cancel = {$: 'Cancel'};
 var $author$project$View$Loader$FetchSource = {$: 'FetchSource'};
@@ -12178,4 +12232,4 @@ var $author$project$Main$view = function (model) {
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Entity.Bookmark":{"args":[],"type":"{ url : Entity.Url, title : Entity.Title }"},"Entity.Title":{"args":[],"type":"String.String"},"Entity.Url":{"args":[],"type":"String.String"}},"unions":{"Main.Msg":{"args":[],"tags":{"OpenLoader":[],"ExportBookmarks":[],"OpenNewBookmarkEditor":[],"GotAddNewBookmarkMsg":["View.BookmarkEditor.Msg"],"GotLoaderMsg":["View.Loader.Msg"],"GotBookmarkListMsg":["View.BookmarkList.Msg"]}},"View.BookmarkEditor.Msg":{"args":[],"tags":{"InputUrl":["Entity.Url"],"InputTitle":["Entity.Title"],"Save":[],"Cancel":[]}},"View.BookmarkList.Msg":{"args":[],"tags":{"DragStart":["Basics.Int","Entity.Bookmark"],"DragEnd":[],"DragEnter":["Basics.Int"],"DragLeave":[],"Drop":[],"Remove":["Basics.Int"],"OpenEdit":["Basics.Int","Entity.Bookmark"],"EditorMsg":["View.BookmarkEditor.Msg"]}},"View.Loader.Msg":{"args":[],"tags":{"InputUrl":["String.String"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Entity.Bookmark)"],"Cancel":[]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Entity.Bookmark":{"args":[],"type":"{ url : Entity.Url, title : Entity.Title }"},"Entity.Title":{"args":[],"type":"String.String"},"Entity.Url":{"args":[],"type":"String.String"}},"unions":{"Main.Msg":{"args":[],"tags":{"OpenLoader":[],"ExportBookmarks":[],"OpenNewBookmarkEditor":[],"GotAddNewBookmarkMsg":["View.BookmarkEditor.Msg"],"GotLoaderMsg":["View.Loader.Msg"],"GotBookmarkListMsg":["View.BookmarkList.Msg"]}},"View.BookmarkEditor.Msg":{"args":[],"tags":{"InputUrl":["Entity.Url"],"InputTitle":["Entity.Title"],"Save":[],"Cancel":[]}},"View.BookmarkList.Msg":{"args":[],"tags":{"Drag":[],"DragStart":["Basics.Int","Entity.Bookmark"],"DragEnd":[],"DragEnter":["Basics.Int"],"DragLeave":[],"DragOver":["Basics.Int"],"Drop":[],"Remove":["Basics.Int"],"OpenEdit":["Basics.Int","Entity.Bookmark"],"GotEditorMsg":["View.BookmarkEditor.Msg"]}},"View.Loader.Msg":{"args":[],"tags":{"InputUrl":["String.String"],"FetchSource":[],"GotSource":["Result.Result Http.Error (List.List Entity.Bookmark)"],"Cancel":[]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"List.List":{"args":["a"],"tags":{}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));

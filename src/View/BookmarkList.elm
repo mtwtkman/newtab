@@ -10,7 +10,7 @@ import Entity exposing (Bookmark, encodeBookmarks)
 import Func exposing (chunk, flip, inject)
 import Html exposing (Attribute, Html, a, div, img, text)
 import Html.Attributes exposing (class, draggable, href, src, title)
-import Html.Events exposing (preventDefaultOn)
+import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as D
 import Ports exposing (updateBookmarks)
 import Url.Builder as UB exposing (crossOrigin)
@@ -18,19 +18,16 @@ import View.BookmarkEditor as Editor
 import View.Widget exposing (infoButtonViewWrapper)
 
 
-type Mode
-    = Display (Maybe Grabbed)
-    | Edit
-        { state : Editor.Model
-        , index : Int
-        }
-
-
 type alias Model =
     { rowLength : Int
     , bookmarks : List Bookmark
     , mode : Mode
     }
+
+
+type Mode
+    = Display (Maybe Grabbed)
+    | Edit Int Editor.Model
 
 
 type alias Grabbed =
@@ -49,19 +46,31 @@ initModel rowLength bookmarks =
 
 
 type Msg
-    = DragStart Int Bookmark
+    = Drag
+    | DragStart Int Bookmark
     | DragEnd
     | DragEnter Int
     | DragLeave
+    | DragOver Int
     | Drop
     | Remove Int
     | OpenEdit Int Bookmark
-    | EditorMsg Editor.Msg
+    | GotEditorMsg Editor.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.mode ) of
+        ( Drag, Display (Just _) ) ->
+            ( model, Cmd.none )
+
+        ( DragOver index, Display (Just grabbed) ) ->
+            ( { model
+                | mode = Display (Just { grabbed | hoveredIndex = Just index })
+              }
+            , Cmd.none
+            )
+
         ( DragStart sourceIndex bookmark, Display Nothing ) ->
             let
                 dropAreaBookmarks =
@@ -164,48 +173,37 @@ update msg model =
         ( OpenEdit index bookmark, Display Nothing ) ->
             ( { model
                 | mode =
-                    Edit
-                        { state = Editor.initModel bookmark
-                        , index = index
-                        }
+                    Edit index (Editor.initModel bookmark)
               }
             , Cmd.none
             )
 
-        ( EditorMsg editorMsg, Edit edit ) ->
+        ( GotEditorMsg editorMsg, Edit index editorModel ) ->
             let
                 ( m, c ) =
-                    Editor.update editorMsg edit.state
+                    Editor.update editorMsg editorModel
             in
             case m of
                 Editor.Saved updatedBookmark ->
                     let
                         newBookmarks =
                             List.take
-                                edit.index
+                                index
                                 model.bookmarks
-                                ++ (updatedBookmark :: List.drop (edit.index + 1) model.bookmarks)
+                                ++ (updatedBookmark :: List.drop (index + 1) model.bookmarks)
                     in
                     ( { model
                         | bookmarks = newBookmarks
                         , mode = Display Nothing
                       }
-                    , Cmd.none
+                    , Cmd.map GotEditorMsg c
                     )
 
                 Editor.Canceled ->
-                    ( model, Cmd.none )
+                    ( { model | mode = Display Nothing }, Cmd.none )
 
                 _ ->
-                    ( { model
-                        | mode =
-                            Edit
-                                { edit
-                                    | state = m
-                                }
-                      }
-                    , Cmd.map EditorMsg c
-                    )
+                    ( { model | mode = Edit index m }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -217,27 +215,33 @@ view model =
         chunked =
             List.indexedMap Tuple.pair model.bookmarks |> flip chunk model.rowLength
     in
-    div
-        [ class "bookmark-list"
-        ]
-        (List.map
-            (\xs ->
-                div
-                    [ class "bookmark-items-row"
-                    ]
-                    (List.map
-                        (\( i, b ) ->
-                            div
-                                []
-                                [ droppable i
-                                , itemView i b
-                                ]
-                        )
-                        xs
+    case model.mode of
+        Display _ ->
+            div
+                [ class "bookmark-list"
+                ]
+                (List.map
+                    (\xs ->
+                        div
+                            [ class "bookmark-items-row"
+                            ]
+                            (List.map
+                                (\( i, b ) ->
+                                    div
+                                        [ class "bookmark-items-cell"
+                                        ]
+                                        [ droppable i
+                                        , itemView i b
+                                        ]
+                                )
+                                xs
+                            )
                     )
-            )
-            chunked
-        )
+                    chunked
+                )
+
+        Edit _ editorModel ->
+            Html.map GotEditorMsg (Editor.view editorModel)
 
 
 itemView : Int -> Bookmark -> Html Msg
@@ -245,7 +249,9 @@ itemView i bookmark =
     div
         [ class "bookmark-item"
         , draggable "true"
-        , hijackOn "DragStart" (D.succeed <| DragStart i bookmark)
+        , on "drag" (D.succeed Drag)
+        , on "dragstart" (D.succeed <| DragStart i bookmark)
+        , on "dragend" (D.succeed DragEnd)
         ]
         [ div
             [ class "bookmark-item-card"
@@ -299,9 +305,10 @@ droppable : Int -> Html Msg
 droppable index =
     div
         [ class "droppable"
-        , hijackOn "dragenter" (D.succeed <| DragEnter index)
-        , hijackOn "dragleave" (D.succeed DragLeave)
-        , hijackOn "drop" (D.succeed <| Drop)
+        , on "dragenter" (D.succeed <| DragEnter index)
+        , on "dragleave" (D.succeed DragLeave)
+        , on "drop" (D.succeed <| Drop)
+        , hijackOn "" (D.succeed <| DragOver index)
         ]
         []
 
