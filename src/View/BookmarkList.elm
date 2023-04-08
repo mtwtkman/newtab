@@ -61,9 +61,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.mode ) of
-        ( Drag, Display (Just _) ) ->
-            ( model, Cmd.none )
-
         ( DragOver index, Display (Just grabbed) ) ->
             ( { model
                 | mode = Display (Just { grabbed | hoveredIndex = Just index })
@@ -216,7 +213,7 @@ view model =
             List.indexedMap Tuple.pair model.bookmarks |> flip chunk model.rowLength
     in
     case model.mode of
-        Display _ ->
+        Display grabbed ->
             div
                 [ class "bookmark-list"
                 ]
@@ -230,7 +227,7 @@ view model =
                                     div
                                         [ class "bookmark-items-cell"
                                         ]
-                                        [ droppable i
+                                        [ droppable i grabbed
                                         , itemView i b
                                         ]
                                 )
@@ -301,14 +298,19 @@ defaultSizedFaviconUrl =
     flip faviconUrl 32
 
 
-droppable : Int -> Html Msg
-droppable index =
+droppable : Int -> Maybe Grabbed -> Html Msg
+droppable index maybeGrabbed =
     div
         [ class "droppable"
         , on "dragenter" (D.succeed <| DragEnter index)
         , on "dragleave" (D.succeed DragLeave)
         , on "drop" (D.succeed <| Drop)
         , hijackOn "dragover" (D.succeed <| DragOver index)
+        , class <| case maybeGrabbed of
+          Just grabbed ->
+            Maybe.withDefault "" (Maybe.andThen (\x -> Just <| if x == index then "over-dropzone" else "") grabbed.hoveredIndex)
+          Nothing ->
+            ""
         ]
         []
 

@@ -6,6 +6,7 @@
 .bookmark-items-row {
   display: flex;
   flex-direction: row;
+  margin-bottom: 5px;
 }
 
 .bookmark-items-cell {
@@ -21,9 +22,8 @@
 }
 
 .droppable {
-  width: 20px;
+  width: 12px;
   margin: 1px;
-  background-color: purple;
 }
 
 .bookmark-item-card {
@@ -34,4 +34,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.over-dropzone {
+  background-color: gray;
 }
