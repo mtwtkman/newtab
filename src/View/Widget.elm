@@ -1,24 +1,28 @@
-module View.Widget exposing (inputViewWrapper, infoButtonViewWrapper, dangerButtonViewWrapper, successButtonViewWrapper)
+module View.Widget exposing (dangerButtonViewWrapper, infoButtonViewWrapper, inputViewWrapper, successButtonViewWrapper)
 
 import Html exposing (Attribute, Html, button, div, input, text)
-import Html.Attributes exposing (class, value)
+import Html.Attributes exposing (class, title, type_, value)
 import Html.Events exposing (onClick, onInput)
-import Html.Attributes exposing (title)
-import Html.Attributes exposing (type_)
 
 
 type ButtonColor
-  = DangerButton
-  | InfoButton
-  | SuccessButton
+    = DangerButton
+    | InfoButton
+    | SuccessButton
 
 
 buttonColorToClassName : ButtonColor -> Attribute msg
 buttonColorToClassName buttonColor =
-  case buttonColor of
-    DangerButton -> class "is-danger"
-    InfoButton -> class "is-info"
-    SuccessButton -> class "is-success"
+    case buttonColor of
+        DangerButton ->
+            class "is-danger"
+
+        InfoButton ->
+            class "is-info"
+
+        SuccessButton ->
+            class "is-success"
+
 
 buttonViewWrapper : ButtonColor -> List (Attribute msg) -> String -> msg -> Html msg
 buttonViewWrapper buttonColor attrs label msg =
@@ -37,14 +41,19 @@ buttonViewWrapper buttonColor attrs label msg =
 
 
 infoButtonViewWrapper : List (Attribute msg) -> String -> msg -> Html msg
-infoButtonViewWrapper = buttonViewWrapper InfoButton
+infoButtonViewWrapper =
+    buttonViewWrapper InfoButton
+
 
 dangerButtonViewWrapper : List (Attribute msg) -> String -> msg -> Html msg
-dangerButtonViewWrapper = buttonViewWrapper DangerButton
+dangerButtonViewWrapper =
+    buttonViewWrapper DangerButton
 
 
 successButtonViewWrapper : List (Attribute msg) -> String -> msg -> Html msg
-successButtonViewWrapper = buttonViewWrapper SuccessButton
+successButtonViewWrapper =
+    buttonViewWrapper SuccessButton
+
 
 inputViewWrapper : String -> String -> (String -> msg) -> Html msg
 inputViewWrapper label inputValue handler =

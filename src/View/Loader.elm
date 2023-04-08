@@ -50,8 +50,9 @@ update msg model =
                     ( Fetched bookmarks
                     , updateBookmarks (encodeBookmarks bookmarks)
                     )
-        ( Cancel, _) ->
-          ( Canceled, Cmd.none )
+
+        ( Cancel, _ ) ->
+            ( Canceled, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
