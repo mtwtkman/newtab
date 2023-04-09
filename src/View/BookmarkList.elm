@@ -194,8 +194,18 @@ update msg model =
 view : Model -> Html Msg
 view model =
     let
+        visibleBookmarks : List Bookmark
+        visibleBookmarks =
+            case model.mode of
+                Display (Just grabbed) ->
+                    grabbed.dropAreaBookmarks
+
+                _ ->
+                    model.bookmarks
+
+        chunked : List (List ( Int, Bookmark ))
         chunked =
-            List.indexedMap Tuple.pair model.bookmarks |> flip chunk model.rowLength
+            List.indexedMap Tuple.pair visibleBookmarks |> flip chunk model.rowLength
     in
     case model.mode of
         Display grabbed ->
