@@ -214,26 +214,37 @@ view model =
                 ]
                 (List.map
                     (\xs ->
-                        div
-                            [ class "bookmark-items-row"
-                            ]
-                            (List.map
-                                (\( i, b ) ->
-                                    div
-                                        [ class "bookmark-items-cell"
-                                        ]
-                                        [ droppable i grabbed
-                                        , itemView i b
-                                        ]
-                                )
-                                xs
-                            )
+                        rowView
+                            xs
+                            grabbed
+                            itemView
                     )
                     chunked
                 )
 
         Edit _ editorModel ->
             Html.map GotEditorMsg (Editor.view editorModel)
+
+
+rowView : List ( Int, Bookmark ) -> Maybe Grabbed -> (Int -> Bookmark -> Html Msg) -> Html Msg
+rowView src grabbed innerView =
+    div
+        [ class "bookmark-items-row"
+        ]
+        (List.map
+            (\( i, b ) -> cellView i b grabbed innerView)
+            src
+        )
+
+
+cellView : Int -> Bookmark -> Maybe Grabbed -> (Int -> Bookmark -> Html Msg) -> Html Msg
+cellView index bookmark grabbed innerView =
+    div
+        [ class "bookmark-items-cell"
+        ]
+        [ droppable index grabbed
+        , innerView index bookmark
+        ]
 
 
 itemView : Int -> Bookmark -> Html Msg
