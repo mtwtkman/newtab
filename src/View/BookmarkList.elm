@@ -46,10 +46,8 @@ initModel rowLength bookmarks =
 
 
 type Msg
-    = Drag
-    | DragStart Int Bookmark
+    = DragStart Int Bookmark
     | DragEnd
-    | DragEnter Int
     | DragLeave
     | DragOver Int
     | Drop
@@ -110,19 +108,6 @@ update msg model =
                       }
                     , Cmd.none
                     )
-
-        ( DragEnter hoveredIndex, Display (Just grabbed) ) ->
-            ( { model
-                | mode =
-                    Display
-                        (Just
-                            { grabbed
-                                | hoveredIndex = Just hoveredIndex
-                            }
-                        )
-              }
-            , Cmd.none
-            )
 
         ( DragLeave, Display (Just grabbed) ) ->
             ( { model
@@ -246,7 +231,6 @@ itemView i bookmark =
     div
         [ class "bookmark-item"
         , draggable "true"
-        , on "drag" (D.succeed Drag)
         , on "dragstart" (D.succeed <| DragStart i bookmark)
         , on "dragend" (D.succeed DragEnd)
         ]
@@ -302,15 +286,27 @@ droppable : Int -> Maybe Grabbed -> Html Msg
 droppable index maybeGrabbed =
     div
         [ class "droppable"
-        , on "dragenter" (D.succeed <| DragEnter index)
         , on "dragleave" (D.succeed DragLeave)
         , on "drop" (D.succeed <| Drop)
         , hijackOn "dragover" (D.succeed <| DragOver index)
-        , class <| case maybeGrabbed of
-          Just grabbed ->
-            Maybe.withDefault "" (Maybe.andThen (\x -> Just <| if x == index then "over-dropzone" else "") grabbed.hoveredIndex)
-          Nothing ->
-            ""
+        , class <|
+            case maybeGrabbed of
+                Just grabbed ->
+                    Maybe.withDefault ""
+                        (Maybe.andThen
+                            (\x ->
+                                Just <|
+                                    if x == index then
+                                        "over-dropzone"
+
+                                    else
+                                        ""
+                            )
+                            grabbed.hoveredIndex
+                        )
+
+                Nothing ->
+                    ""
         ]
         []
 
