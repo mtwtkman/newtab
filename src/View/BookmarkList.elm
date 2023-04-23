@@ -162,7 +162,7 @@ update msg model =
 
         ( GotEditorMsg editorMsg, Edit index editorModel ) ->
             let
-                ( m, c ) =
+                ( m, _ ) =
                     Editor.update editorMsg editorModel
             in
             case m of
@@ -178,7 +178,7 @@ update msg model =
                         | bookmarks = newBookmarks
                         , mode = Display Nothing
                       }
-                    , Cmd.map GotEditorMsg c
+                    , updateBookmarks (encodeBookmarks newBookmarks)
                     )
 
                 Editor.Canceled ->
